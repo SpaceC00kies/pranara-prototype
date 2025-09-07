@@ -402,24 +402,32 @@ export class DatabaseService {
  * Create database service instance based on environment
  */
 export function createDatabaseService(): DatabaseService {
+  // Check for Postgres first (recommended migration path)
+  const postgresUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  
+  // Legacy KV support (deprecated)
   const kvUrl = process.env.KV_URL;
-  const postgresUrl = process.env.DATABASE_URL;
 
-  if (kvUrl) {
-    return new DatabaseService({
-      type: 'kv',
-      kvUrl
-    });
-  } else if (postgresUrl) {
+  if (postgresUrl) {
+    console.log('🐘 Using Postgres database (recommended)');
     return new DatabaseService({
       type: 'postgres',
       postgresUrl
     });
-  } else {
-    // Default to KV for development
+  } else if (kvUrl) {
+    console.warn('⚠️  WARNING: Vercel KV is discontinued. Please migrate to Postgres.');
+    console.warn('📖 See VERCEL_KV_MIGRATION_GUIDE.md for migration instructions.');
     return new DatabaseService({
       type: 'kv',
-      kvUrl: 'mock://localhost'
+      kvUrl
+    });
+  } else {
+    console.warn('🔧 No database configured. Using mock database for development.');
+    console.warn('💡 For production, set DATABASE_URL to a Postgres connection string.');
+    // Mock database for development
+    return new DatabaseService({
+      type: 'postgres',
+      postgresUrl: 'mock://localhost'
     });
   }
 }

@@ -26,7 +26,10 @@
     "analyze": "ANALYZE=true npm run build",
     "lighthouse": "lighthouse http://localhost:3000 --output=html --output-path=./lighthouse-report.html --chrome-flags='--headless'",
     "perf:test": "npm run test:e2e -- --grep='Performance'",
-    "a11y:test": "npm run test:e2e -- --grep='Accessibility'"
+    "a11y:test": "npm run test:e2e -- --grep='Accessibility'",
+    "db:migrate": "node scripts/migrate-to-postgres.js",
+    "db:setup": "node scripts/migrate-to-postgres.js",
+    "kv:migrate": "node scripts/migrate-to-postgres.js"
   },
   "dependencies": {
     "@google/genai": "^1.17.0",

@@ -19,6 +19,7 @@ export interface ChatMessage {
 export interface ChatRequest {
   message: string;
   sessionId: string;
+  mode?: AppMode;
 }
 
 export interface ChatResponse {
@@ -26,6 +27,8 @@ export interface ChatResponse {
   topic: TopicCategory;
   showLineOption: boolean;
   sessionId: string;
+  mode?: AppMode;
+  mcpAnalysis?: MCPAnalysisResponse;
 }
 
 // ============================================================================

@@ -5,8 +5,9 @@
  * healthcare-specific context for elderly care conversations.
  */
 
-import { TopicCategory } from '../../types';
+import { TopicCategory, UserProfile, AppMode } from '../../types';
 import { injectJirungContextForPrompt } from '../../data/jirungKnowledge';
+import { getEnhancedSystemPrompt } from '../mcpEnhancedService';
 
 // ============================================================================
 // BASE SYSTEM PROMPTS
@@ -198,39 +199,68 @@ export function buildSystemPrompt(
  * @param userMessage - The user's message
  * @param topic - Detected topic category
  * @param language - Language preference
+ * @param userProfile - User profile for demographic-aware responses
+ * @param mode - App mode (conversation or intelligence)
  * @returns Formatted prompt for the LLM
  */
 export function buildUserPrompt(
   userMessage: string,
   topic: TopicCategory = 'general',
-  language: 'th' | 'en' = 'th'
+  language: 'th' | 'en' = 'th',
+  userProfile?: UserProfile,
+  mode: AppMode = 'conversation'
 ): string {
-  const systemPrompt = buildSystemPrompt(topic, language);
+  let systemPrompt: string;
+  
+  // Use enhanced system prompt if user profile is available
+  if (userProfile && mode) {
+    systemPrompt = getEnhancedSystemPrompt(userProfile, mode);
+  } else {
+    systemPrompt = buildSystemPrompt(topic, language);
+  }
+  
+  // Add mode-specific context
+  const modeContext = mode === 'intelligence' 
+    ? (language === 'th' 
+        ? '\n\nโหมด: Health Intelligence - ให้ข้อมูลเชิงลึก การวิเคราะห์ และคำแนะนำระดับมืออาชีพ'
+        : '\n\nMode: Health Intelligence - Provide in-depth information, analysis, and professional-grade recommendations')
+    : (language === 'th'
+        ? '\n\nโหมด: Conversation - ให้คำแนะนำที่อบอุ่น เข้าใจง่าย และให้กำลังใจ'
+        : '\n\nMode: Conversation - Provide warm, easy-to-understand guidance with encouragement');
   
   // Add context about the conversation
   const contextPrompt = language === 'th' 
-    ? `\n\nผู้ดูแลถาม: ${userMessage}\n\nกรุณาตอบตรงประเด็นที่ถาม ไม่ต้องทักทายหรือแนะนำตัวซ้ำ ให้คำแนะนำที่เป็นประโยชน์ค่ะ:`
-    : `\n\nCaregiver asks: ${userMessage}\n\nPlease respond directly to the question without greetings or introductions, providing helpful guidance:`;
+    ? `${modeContext}\n\nผู้ดูแลถาม: ${userMessage}\n\nกรุณาตอบตรงประเด็นที่ถาม ไม่ต้องทักทายหรือแนะนำตัวซ้ำ ให้คำแนะนำที่เป็นประโยชน์ค่ะ:`
+    : `${modeContext}\n\nCaregiver asks: ${userMessage}\n\nPlease respond directly to the question without greetings or introductions, providing helpful guidance:`;
 
   return systemPrompt + contextPrompt;
 }
 
 /**
- * Gets appropriate disclaimer for response based on topic
+ * Gets appropriate disclaimer for response based on topic and mode
  * @param topic - The conversation topic
  * @param language - Language preference
+ * @param mode - App mode (conversation or intelligence)
  * @returns Disclaimer text or empty string
  */
 export function getResponseDisclaimer(
   topic: TopicCategory,
-  language: 'th' | 'en' = 'th'
+  language: 'th' | 'en' = 'th',
+  mode: AppMode = 'conversation'
 ): string {
   if (topic === 'emergency') {
     return SAFETY_DISCLAIMERS.emergency[language];
   } else if (['medication', 'diabetes', 'post_op'].includes(topic)) {
     return SAFETY_DISCLAIMERS.medication[language];
   } else if (topic !== 'general') {
-    return SAFETY_DISCLAIMERS.medical[language];
+    // Different disclaimers for different modes
+    if (mode === 'intelligence') {
+      return language === 'th'
+        ? 'ข้อมูลนี้ได้จากการวิเคราะห์ด้วย AI และควรใช้ประกอบการพิจารณาเท่านั้น สำหรับคำแนะนำทางการแพทย์ กรุณาปรึกษาแพทย์ผู้เชี่ยวชาญ'
+        : 'This information is from AI analysis and should be used for consideration only. For medical advice, please consult healthcare professionals.';
+    } else {
+      return SAFETY_DISCLAIMERS.medical[language];
+    }
   }
   
   return '';

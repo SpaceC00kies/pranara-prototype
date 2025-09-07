@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { message, sessionId } = body;
+    const { message, sessionId, mode = 'conversation' } = body;
 
     // Generate session ID if not provided or invalid
     const validSessionId = isValidSessionId(sessionId) ? sessionId : generateSessionId();
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     const language = detectLanguage(message);
 
     // Get user profile for demographic-aware responses
-    const userProfile = await getUserProfile(validSessionId);
+    const userProfile = await getUserProfile(validSessionId) || undefined;
 
     // For Jirung queries, we'll handle context in the system prompt instead
     // to avoid triggering greeting responses
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
       const conversationLength = 1; // This should be tracked per session in production
       
       aiResponse = await retryApiCall(
-        () => ai.processMessage(enhancedMessage, validSessionId, language, conversationLength),
+        () => ai.processMessage(enhancedMessage, validSessionId, language, conversationLength, mode, userProfile),
         'ai-process-message',
         {
           maxAttempts: 2,
@@ -164,7 +164,9 @@ export async function POST(request: NextRequest) {
       response: aiResponse.response,
       topic: aiResponse.topic as TopicCategory,
       showLineOption: aiResponse.showLineOption,
-      sessionId: validSessionId
+      sessionId: validSessionId,
+      mode: aiResponse.mode || mode,
+      mcpAnalysis: aiResponse.mcpAnalysis
     };
 
     // Add performance headers

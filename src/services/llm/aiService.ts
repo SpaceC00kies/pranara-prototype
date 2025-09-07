@@ -11,7 +11,11 @@ import {
   LLMResponse, 
   LLMError,
   TopicCategory,
-  SafetyCheckResult
+  SafetyCheckResult,
+  MCPAnalysisRequest,
+  MCPAnalysisResponse,
+  UserProfile,
+  AppMode
 } from '../../types';
 
 import { 
@@ -31,6 +35,8 @@ import {
 import { 
   shouldRecommendLineHandoff
 } from '../lineService';
+import { healthIntelligenceService } from '../healthIntelligenceService';
+import { getUserProfile } from '../userProfileService';
 
 // ============================================================================
 // AI SERVICE CONFIGURATION
@@ -58,6 +64,8 @@ export interface AIServiceResponse {
     completionTokens: number;
     totalTokens: number;
   };
+  mcpAnalysis?: MCPAnalysisResponse;
+  mode?: AppMode;
 }
 
 // ============================================================================
@@ -77,13 +85,17 @@ export class AIService {
    * @param sessionId - Session identifier
    * @param language - Language preference (th/en)
    * @param conversationLength - Number of messages in conversation (for LINE handoff logic)
+   * @param mode - App mode (conversation or intelligence)
+   * @param userProfile - User profile for demographic-aware responses
    * @returns Promise<AIServiceResponse> - Complete response with metadata
    */
   async processMessage(
     message: string,
     sessionId: string,
     language: 'th' | 'en' = 'th',
-    conversationLength: number = 1
+    conversationLength: number = 1,
+    mode: AppMode = 'conversation',
+    userProfile?: UserProfile
   ): Promise<AIServiceResponse> {
     try {
       // Step 1: Validate and sanitize input
@@ -111,30 +123,68 @@ export class AIService {
       // Step 4: Classify topic (Jirung context now handled in system prompt)
       const topic = classifyTopic(validatedMessage);
       
-      // Step 5: Determine LINE handoff recommendation
+      // Step 5: Get or use provided user profile
+      const profile = userProfile || await getUserProfile(sessionId);
+      
+      // Step 6: Use Health Intelligence service for enhanced analysis (if in intelligence mode)
+      let mcpAnalysis: MCPAnalysisResponse | undefined;
+      let enhancedResponse: string;
+      
+      if (mode === 'intelligence') {
+        try {
+          // Create MCP analysis request
+          const mcpRequest: MCPAnalysisRequest = {
+            message: validatedMessage,
+            context: {
+              userProfile: profile,
+              currentMode: mode,
+              sessionMetadata: {
+                sessionId,
+                messageCount: conversationLength,
+                duration: 0, // Would be calculated in real implementation
+                language
+              }
+            },
+            analysisType: 'health-intelligence'
+          };
+          
+          // Perform MCP-powered analysis
+          mcpAnalysis = await healthIntelligenceService.analyzeHealthQuery(mcpRequest);
+          enhancedResponse = mcpAnalysis.response;
+          
+        } catch (error) {
+          console.warn('Health Intelligence analysis failed, falling back to standard AI:', error);
+          // Fall back to standard AI processing
+          const prompt = buildUserPrompt(validatedMessage, topic, language, profile, mode);
+          const llmResponse = await this.generateWithRetry(prompt);
+          enhancedResponse = llmResponse.content;
+        }
+      } else {
+        // Standard conversation mode processing
+        const prompt = buildUserPrompt(validatedMessage, topic, language, profile, mode);
+        const llmResponse = await this.generateWithRetry(prompt);
+        enhancedResponse = llmResponse.content;
+      }
+      
+      // Step 7: Determine LINE handoff recommendation
       const lineHandoffRecommendation = shouldRecommendLineHandoff(
         validatedMessage,
         topic,
         conversationLength
       );
-      
-      // Use standard prompt - Jirung info is already in system prompt
-      const prompt = buildUserPrompt(validatedMessage, topic, language);
 
-      // Step 6: Generate AI response
-      const llmResponse = await this.generateWithRetry(prompt);
-
-      // Step 7: Process and format response
+      // Step 8: Process and format response
       const formattedResponse = this.formatResponse(
-        llmResponse.content,
+        enhancedResponse,
         topic,
         language,
-        validation.recommendLineHandoff || lineHandoffRecommendation.shouldRecommend
+        validation.recommendLineHandoff || lineHandoffRecommendation.shouldRecommend,
+        mode
       );
 
       return {
         response: formattedResponse,
-        topic,
+        topic: mcpAnalysis?.topic || topic,
         showLineOption: validation.recommendLineHandoff || 
                        processingResult.safetyResult.recommendLineHandoff ||
                        lineHandoffRecommendation.shouldRecommend,
@@ -142,7 +192,13 @@ export class AIService {
         processingResult,
         lineHandoffReason: lineHandoffRecommendation.reason,
         lineHandoffUrgency: lineHandoffRecommendation.urgency,
-        usage: llmResponse.usage,
+        mcpAnalysis,
+        mode,
+        usage: {
+          promptTokens: 0, // Would be tracked from actual LLM calls
+          completionTokens: 0,
+          totalTokens: 0
+        }
       };
 
     } catch (error) {
@@ -263,13 +319,15 @@ export class AIService {
    * @param topic - Conversation topic
    * @param language - Language preference
    * @param recommendLineHandoff - Whether to recommend LINE handoff
+   * @param mode - App mode (conversation or intelligence)
    * @returns Formatted response string
    */
   private formatResponse(
     content: string,
     topic: TopicCategory,
     language: 'th' | 'en',
-    recommendLineHandoff: boolean
+    recommendLineHandoff: boolean,
+    mode: AppMode = 'conversation'
   ): string {
     let formattedResponse = content.trim();
 
@@ -278,8 +336,8 @@ export class AIService {
       formattedResponse = formatThaiTextResponse(formattedResponse);
     }
 
-    // Add disclaimer if needed
-    const disclaimer = getResponseDisclaimer(topic, language);
+    // Add disclaimer if needed (different for intelligence mode)
+    const disclaimer = getResponseDisclaimer(topic, language, mode);
     if (disclaimer) {
       formattedResponse += '\n\n' + disclaimer;
     }
@@ -291,6 +349,15 @@ export class AIService {
         : '\n\nFor additional guidance, you can contact our team via LINE.';
       
       formattedResponse += lineMessage;
+    }
+
+    // Add mode switching suggestion for conversation mode
+    if (mode === 'conversation' && (topic === 'alzheimer' || topic === 'diabetes' || topic === 'medication')) {
+      const modeSwitchMessage = language === 'th'
+        ? '\n\n💡 สำหรับข้อมูลเชิงลึกและการวิเคราะห์แบบมืออาชีพ ลองเปลี่ยนไปใช้โหมด "Health Intelligence" ได้ค่ะ'
+        : '\n\n💡 For in-depth information and professional analysis, try switching to "Health Intelligence" mode.';
+      
+      formattedResponse += modeSwitchMessage;
     }
 
     return formattedResponse;
