@@ -1,26 +1,584 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Primary Colors - Health-focused blue palette */
+  --color-primary-50: #E9F2FC;
+  --color-primary-100: #D3E5F9;
+  --color-primary-200: #A7CBF3;
+  --color-primary-300: #7BB1ED;
+  --color-primary-400: #4F97E7;
+  --color-primary-500: #4A90E2;
+  --color-primary-600: #357ABD;
+  --color-primary-700: #2A6298;
+  --color-primary-800: #1F4A73;
+  --color-primary-900: #14324E;
+  
+  /* Health accent colors */
+  --color-health-green: #10b981;
+  --color-health-mint: #6EE7B7;
+  --color-health-sage: #A7F3D0;
+  
+  /* Warm support colors */
+  --color-warm-peach: #FED7AA;
+  --color-warm-coral: #FCA5A5;
+  
+  /* Text colors - WCAG compliant */
+  --color-text-primary: #1a202c;
+  --color-text-secondary: #4a5568;
+  --color-text-muted: #9CA3AF;
+  
+  /* Background colors */
+  --color-neutral-light: #f7fafc;
+  --color-white: #ffffff;
+  --color-gradient-start: #f0f9ff;
+  --color-gradient-end: #ecfdf5;
+  
+  /* Border colors */
+  --color-border-light: #e2e8f0;
+  --color-border-medium: #cbd5e0;
+  
+  /* Shadow system */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-base: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-soft: 0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04);
+  --shadow-chat: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  
+  /* Typography */
+  --font-prompt: 'Prompt', ui-sans-serif, system-ui, sans-serif;
+  --font-sarabun: 'Sarabun', ui-sans-serif, system-ui, sans-serif;
+  
+  /* Spacing system (8px-based like HAJOBJA) */
+  --space-1: 0.5rem;   /* 8px */
+  --space-2: 1rem;     /* 16px */
+  --space-3: 1.5rem;   /* 24px */
+  --space-4: 2rem;     /* 32px */
+  --space-5: 2.5rem;   /* 40px */
+  --space-6: 3rem;     /* 48px */
+  --space-8: 4rem;     /* 64px */
+  
+  /* Border radius */
+  --radius-sm: 0.25rem;  /* 4px */
+  --radius-base: 0.5rem; /* 8px */
+  --radius-md: 0.75rem;  /* 12px */
+  --radius-lg: 1rem;     /* 16px */
+  --radius-xl: 1.5rem;   /* 24px */
+  --radius-full: 9999px;
+  
+  /* Transitions */
+  --transition-fast: 150ms;
+  --transition-base: 200ms;
+  --transition-slow: 300ms;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  font-family: var(--font-prompt);
+  background: #ffffff;
+  color: var(--color-text-primary);
+  line-height: 1.6;
+}
+
+/* Thai language optimization */
+:lang(th) {
+  font-family: var(--font-sarabun);
+}
+
+/* Better text rendering for Thai fonts */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  background: var(--color-white) !important;
+  background-color: var(--color-white) !important;
+  background-image: none !important;
+  font-feature-settings: "kern" 1, "liga" 1;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Container system like HAJOBJA */
+.container {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .container {
+    max-width: 640px;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@media (min-width: 768px) {
+  .container {
+    max-width: 768px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    max-width: 1024px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .container {
+    max-width: 1280px;
+  }
+}
+
+/* Improved spacing for Thai text - AI chat optimized */
+.font-sarabun {
+  letter-spacing: 0.01em;
+  word-spacing: 0.02em;
+  line-height: 1.65;
+}
+
+.font-prompt {
+  letter-spacing: 0.005em;
+  line-height: 1.6;
+}
+
+/* Chat-specific typography improvements */
+.chat-text {
+  line-height: 1.65;
+  word-spacing: 0.02em;
+  letter-spacing: 0.01em;
+}
+
+.chat-text p {
+  margin-bottom: 0.75rem;
+}
+
+.chat-text p:last-child {
+  margin-bottom: 0;
+}
+
+/* Better paragraph spacing for multi-line messages */
+.chat-message-content {
+  line-height: 1.65;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.chat-message-content > * + * {
+  margin-top: 0.75rem;
+}
+
+/* Mobile-optimized text spacing */
+@media (max-width: 640px) {
+  .chat-message-content {
+    line-height: 1.6;
+    font-size: 14px;
+  }
+  
+  .font-sarabun {
+    letter-spacing: 0.005em;
+    word-spacing: 0.015em;
+  }
+  
+  /* Tighter spacing on mobile */
+  .space-y-6 > * + * {
+    margin-top: 1.25rem;
+  }
+}
+
+/* Desktop-optimized text spacing */
+@media (min-width: 1024px) {
+  .chat-message-content {
+    line-height: 1.7;
+  }
+  
+  /* More generous spacing on desktop */
+  .space-y-6 > * + * {
+    margin-top: 1.75rem;
+  }
+}
+
+/* Enhanced readability for long messages */
+.chat-message-content {
+  text-align: left;
+  text-justify: none;
+}
+
+/* Better text selection */
+.chat-message-content::selection {
+  background-color: rgba(74, 144, 226, 0.2);
+  color: inherit;
+}
+
+.chat-message-content::-moz-selection {
+  background-color: rgba(74, 144, 226, 0.2);
+  color: inherit;
+}
+
+/* Clean button system like HAJOBJA */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: var(--radius-base);
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast) ease;
+  min-height: 48px;
+  min-width: 48px;
+  text-decoration: none;
+}
+
+/* Performance optimizations */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Focus styles for accessibility */
+*:focus {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+/* Button focus styles */
+button:focus,
+input:focus,
+textarea:focus {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+/* Animation Delay Utilities */
+.animation-delay-1000 {
+  animation-delay: 1s;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+.animation-delay-6000 {
+  animation-delay: 6s;
+}
+
+/* Custom Scrollbar Styles for Chat Area */
+.chat-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(74, 144, 226, 0.3) transparent;
+}
+
+.chat-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 3px;
+}
+
+.chat-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(74, 144, 226, 0.3);
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
+}
+
+.chat-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(74, 144, 226, 0.5);
+}
+
+.chat-scrollbar::-webkit-scrollbar-thumb:active {
+  background: rgba(74, 144, 226, 0.7);
+}
+
+/* Glassmorphism Effects */
+.glass {
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.glass-light {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-strong {
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.glass-dark {
+  background: rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Backdrop Blur Variations */
+.backdrop-blur-xs {
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.backdrop-blur-sm {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.backdrop-blur-base {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.backdrop-blur-md {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.backdrop-blur-lg {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.backdrop-blur-xl {
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+/* Mix Blend Modes for Background Shapes */
+.blend-multiply {
+  mix-blend-mode: multiply;
+}
+
+.blend-screen {
+  mix-blend-mode: screen;
+}
+
+.blend-overlay {
+  mix-blend-mode: overlay;
+}
+
+.blend-soft-light {
+  mix-blend-mode: soft-light;
+}
+
+.blend-hard-light {
+  mix-blend-mode: hard-light;
+}
+
+.blend-color-dodge {
+  mix-blend-mode: color-dodge;
+}
+
+.blend-color-burn {
+  mix-blend-mode: color-burn;
+}
+
+.blend-darken {
+  mix-blend-mode: darken;
+}
+
+.blend-lighten {
+  mix-blend-mode: lighten;
+}
+
+.blend-difference {
+  mix-blend-mode: difference;
+}
+
+.blend-exclusion {
+  mix-blend-mode: exclusion;
+}
+
+/* Floating Background Shapes */
+.floating-shape {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.1;
+  animation: float 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.floating-shape-1 {
+  width: 200px;
+  height: 200px;
+  background: linear-gradient(45deg, var(--color-primary-300), var(--color-health-mint));
+  top: 10%;
+  left: 10%;
+  animation-delay: 0s;
+}
+
+.floating-shape-2 {
+  width: 150px;
+  height: 150px;
+  background: linear-gradient(135deg, var(--color-warm-peach), var(--color-primary-200));
+  top: 60%;
+  right: 15%;
+  animation-delay: 2s;
+}
+
+.floating-shape-3 {
+  width: 100px;
+  height: 100px;
+  background: linear-gradient(225deg, var(--color-health-sage), var(--color-primary-100));
+  bottom: 20%;
+  left: 20%;
+  animation-delay: 4s;
+}
+
+/* Smooth Transitions for Interactive Elements */
+.smooth-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.smooth-transition-fast {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.smooth-transition-slow {
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Hover Effects */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(74, 144, 226, 0.15);
+}
+
+.hover-glow {
+  transition: box-shadow 0.3s ease;
+}
+
+.hover-glow:hover {
+  box-shadow: 0 0 20px rgba(74, 144, 226, 0.3);
+}
+
+/* Loading States */
+.loading-shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Chat-specific Animations */
+.message-enter {
+  animation: slideUp 0.3s ease-out;
+}
+
+.typing-dots {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.typing-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+  animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.typing-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+/* Accessibility Improvements */
+.focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  .glass,
+  .glass-light,
+  .glass-strong {
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid var(--color-primary-500);
+  }
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .floating-shape {
+    animation: none;
+  }
+  
+  .loading-shimmer {
+    animation: none;
+  }
 }

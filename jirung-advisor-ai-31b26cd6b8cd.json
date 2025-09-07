@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "jirung-advisor-ai",
+  "private_key_id": "31b26cd6b8cd62c6382ffd80fd3f0e9c1f8c8d6e",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEuwIBADANBgkqhkiG9w0BAQEFAASCBKUwggShAgEAAoIBAQDUzOVYI0Y5s0Iq\nANFwq0aj4YwsDq+lQmVAwjPuE4GIkArKksWJj1xwirO9PZqqIgr7In9GdxjqX2Z+\ndcj7qEweVGbY3n9M4FdFcXUuUZGtofC4pnyc6UHwt7EzAU3bj1VPNRD0ZsjP1lqv\nGRnIZa6PgaK8D2h4PH39orPsDMbemcD7pj8ytJEYjWsiP39CRJPdZ48i2jOfyKyC\njt5LSOzKcHmQaMlpaVpRw/pOe7UvAysFges4qKqVysraNNlxywaTuGdKtKcYT1i2\nwShZzWNnfHWDGdHBeW0KilLz9QSSrO/FcCiieNQCzFpgk48rXaG/e9d6NvAJx+L9\nNQPGDCGrAgMBAAECgf85CD9S3+hyVYqQt1IVQ9Iq4QET6jEMmZQ0KoL5Weukn9nS\nxkqATIhPL4f8k5RgIRTsx+6NdCUOq4La7+9RSknG858OnQTy+S1OKCiG3ePmJTmm\nCocF+JqI95Xpzn3kvekRClKPLhlq7916gfiRrq7TADKO+5Iu4EByVjcbU6ajrGnB\njupyTcXxdeaRQteU9n8dnAi3xE5fcjaWgjpWrAaRJgXRWmAK74kHl5CnGSuL30wq\nIR0Q0PS8UU1kjyBf33qGMxgPtyYPRDQCqNDKtjUzvC23IwvW6PN2ymJKNz5Fz71/\n7brRoUM6sLoALNh+Y/VINOXpus2kr9sWZbFMXz0CgYEA7SigpXlnvRnPjnz0ZFM2\n8eO64qu+ehd1tF/LcwWeeS1x9VepMUFTr/hipEpISxkBHWv6NoFrEeW+QaXVMeRd\nICRCNMvzCr6nZtZQLBCKBe4Dm0uAdNRe1wniAKFNGHVtrLqAnk8lcW19hdoK3Ruj\nXb8eknXaS/6M68FxJP6liUcCgYEA5bTdXgHcR8a7IL0mVpi4WisHHUCBadPfMGQP\nWgPqLlEZVh9NEthc43uFrCnwf+7hQyZYB1FPV5z+gZQ+NZW5EllyO3igfXl7BPNn\nECkIFQm/+5Fr0eylNrS30EK8vBEFLFLbMvaR46B4PsXqfJKubDF/oQVWB5nha73T\nnZU0Fn0CgYEAou2mcAhYHLH+xgVSYRpKRSQO4GrdEUPMuX6WZw8VMGroP4VZ11zq\nAZrDKdtejzk+atgjrg57YHBVpQQo033v/ITsdxkmf9s7ZosVyTATor9B+w6D0b+U\n6GcBvS0TqhoCnwgCFMCLGMH/2lVR4VV7howmlLgioNLgPZdIBAJt90ECgYBuJrwc\nr2G1navweCPhVNzaiFWiBmPInswhRWpDLStoSIWQ0fPAvLZWc85XD8l/X8rvy3xd\nDfWxOtykwLTQN1sHXJM1x5OWd+GxLxNWIYb5p7JDbam5gfR79k9K9CXTPYowhg8N\nMkYlVLc0yu22DRTNVzMvwQJPJNB/PQk0QO84dQKBgGHdqdLgXhGt3OAG34ZelrDJ\naVnHJ0VfBoEz7QckreKm3hesC9uIzPiRRb1ZN6M857NCYmh8xQIYJfANxmQJGliF\n1RIJXQBRtAiLur2BUQ20Hxch02yFujmz7oahl71QFdMFRL1oAukl/SrKR2DsbcXu\nQBX5rc5psRp9foTQBCGt\n-----END PRIVATE KEY-----\n",
+  "client_email": "mcp-service-account@jirung-advisor-ai.iam.gserviceaccount.com",
+  "client_id": "101332410387778568520",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/mcp-service-account%40jirung-advisor-ai.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
