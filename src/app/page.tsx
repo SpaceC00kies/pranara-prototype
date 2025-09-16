@@ -98,6 +98,9 @@ export default function Home() {
         <p className="font-sarabun text-xl text-text-secondary max-w-lg mx-auto leading-relaxed">
           ลมหายใจแห่งปัญญา
         </p>
+        <p className="font-mono text-sm text-gray-400 mt-2">
+          version : Pranara Genesis (PNR-G)
+        </p>
       </div>
 
       {/* Chat Container */}
