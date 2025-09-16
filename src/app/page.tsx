@@ -14,6 +14,7 @@ export default function Home() {
   const [sessionId] = useState(() => crypto.randomUUID());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [isInputFocused, setIsInputFocused] = useState(false);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -89,7 +90,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background-secondary via-white to-background-tertiary flex flex-col">
+    <div className={`min-h-screen bg-gradient-to-br from-background-secondary via-white to-background-tertiary flex flex-col ${isInputFocused ? 'mobile-keyboard-open' : ''}`}>
       {/* Header with Pranara */}
       <div className="flex-shrink-0 text-center py-16 px-4">
         <h1 className="font-boska text-6xl md:text-7xl font-bold text-pranara-main mb-2" style={{ fontFamily: 'Boska, ui-serif, Georgia, serif' }}>
@@ -168,6 +169,8 @@ export default function Home() {
                 ref={inputRef}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
+                onFocus={() => setIsInputFocused(true)}
+                onBlur={() => setIsInputFocused(false)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -178,12 +181,13 @@ export default function Home() {
                 className="
                   w-full px-4 py-3
                   bg-white border border-neutral-300 rounded-xl
-                  font-sarabun text-sm
+                  font-sarabun text-base
                   placeholder-text-muted
                   focus:outline-none focus:ring-2 focus:ring-pranara-main focus:border-pranara-main
                   resize-none overflow-hidden
                   min-h-[48px] max-h-32
                   transition-all duration-200
+                  touch-manipulation
                 "
                 rows={1}
                 disabled={isLoading}

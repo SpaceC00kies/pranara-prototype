@@ -42,6 +42,9 @@ export const metadata: Metadata = {
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({
@@ -83,6 +86,57 @@ export default function RootLayout({
             * {
               -webkit-tap-highlight-color: transparent;
               -webkit-touch-callout: none;
+            }
+            
+            /* Prevent iOS zoom on input focus */
+            input[type="text"],
+            input[type="email"],
+            input[type="password"],
+            input[type="search"],
+            input[type="tel"],
+            input[type="url"],
+            textarea,
+            select {
+              font-size: 16px !important;
+              -webkit-appearance: none;
+              -webkit-border-radius: 0;
+              border-radius: 0;
+            }
+            
+            /* iOS Safari specific fixes */
+            @supports (-webkit-touch-callout: none) {
+              input,
+              textarea {
+                font-size: 16px !important;
+                transform: translateZ(0);
+                -webkit-transform: translateZ(0);
+              }
+            }
+            
+            /* Mobile keyboard handling */
+            .mobile-keyboard-open {
+              height: 100vh;
+              height: 100dvh; /* Dynamic viewport height for modern browsers */
+            }
+            
+            /* Prevent body scroll when keyboard is open */
+            @media screen and (max-width: 768px) {
+              .mobile-keyboard-open {
+                position: fixed;
+                width: 100%;
+                overflow: hidden;
+              }
+            }
+            
+            /* Better touch targets for mobile */
+            @media (hover: none) and (pointer: coarse) {
+              button, 
+              [role="button"],
+              input,
+              textarea {
+                min-height: 44px;
+                min-width: 44px;
+              }
             }
             
             /* Touch-friendly interactions */
