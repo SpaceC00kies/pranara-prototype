@@ -14,7 +14,6 @@ export default function Home() {
   const [sessionId] = useState(() => crypto.randomUUID());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const [isInputFocused, setIsInputFocused] = useState(false);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -90,9 +89,9 @@ export default function Home() {
   };
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-background-secondary via-white to-background-tertiary flex flex-col ${isInputFocused ? 'mobile-keyboard-open' : ''}`}>
+    <div className="h-dvh bg-gradient-to-br from-background-secondary via-white to-background-tertiary flex flex-col">
       {/* Header with Pranara */}
-      <div className="flex-shrink-0 text-center py-16 px-4">
+      <div className="flex-shrink-0 text-center py-8 md:py-16 px-4">
         <h1 className="font-boska text-6xl md:text-7xl font-bold text-pranara-main mb-2" style={{ fontFamily: 'Boska, ui-serif, Georgia, serif' }}>
           Pranara
         </h1>
@@ -102,7 +101,7 @@ export default function Home() {
       </div>
 
       {/* Chat Container */}
-      <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-4 pb-8">
+      <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-4 pb-4 md:pb-8">
         {/* Messages Area - Seamless */}
         <div className="flex-1 overflow-y-auto mb-6">
           <div>
@@ -169,8 +168,6 @@ export default function Home() {
                 ref={inputRef}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                onFocus={() => setIsInputFocused(true)}
-                onBlur={() => setIsInputFocused(false)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -187,7 +184,6 @@ export default function Home() {
                   resize-none overflow-hidden
                   min-h-[48px] max-h-32
                   transition-all duration-200
-                  touch-manipulation
                 "
                 rows={1}
                 disabled={isLoading}
