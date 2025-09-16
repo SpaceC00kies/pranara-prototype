@@ -44,12 +44,11 @@ export function validateLineUrl(url: string): boolean {
 
 /**
  * Topics that should trigger LINE handoff recommendations
+ * Only for truly critical situations that require immediate professional help
  */
 const LINE_HANDOFF_TOPICS: TopicCategory[] = [
   'emergency',
-  'medication',
-  'post_op',
-  'diabetes'
+  'medication' // Only medication questions need immediate professional guidance
 ];
 
 /**

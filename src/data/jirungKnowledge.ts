@@ -102,7 +102,7 @@ export const JIRUNG_KNOWLEDGE: JirungInfo = {
 
   contact: {
     phone: "080-802-6622",
-    line: "@jirungwellness",
+    line: "LINE (สอบถามได้)",
     email: "info@jirungwellness.com",
     website: "https://www.jirungwellness.com"
   },
@@ -243,18 +243,17 @@ export function getRelevantJirungInfo(query: string): string {
 /** Helper: inject Jirung context into a system prompt for the chat agent */
 export function injectJirungContextForPrompt(baseSystemPrompt: string): string {
   const k = JIRUNG_KNOWLEDGE;
-  const lines = [
-    baseSystemPrompt,
-    "",
-    "— Jirung Context —",
-    `${k.name} @ ${k.location.address}`,
-    `Philosophy: ${k.philosophy}`,
-    `Programs:`,
-    `- ${k.programs.flagshipCancerRetreat.title} (${k.programs.flagshipCancerRetreat.duration})`,
-    `- ${k.programs.shortRetreat.title} (${k.programs.shortRetreat.duration})`,
-    `Services: ${k.services.slice(0, 4).join("; ")}`,
-    `Contact: Tel ${k.contact.phone} | LINE ${k.contact.line} | Web ${k.contact.website}`,
-    `Safety: ${k.disclaimers.nonMedical} / ${k.disclaimers.safety}`
-  ];
-  return lines.join("\n");
+  return `${baseSystemPrompt}
+
+สิ่งสำคัญ:
+- เป็นตัวเองและพูดธรรมชาติ
+- ห้ามขายของหรือโปรโมท
+- ห้ามให้เบอร์โทรหรือ LINE ID
+- ให้ความรู้สึกอบอุ่นและเข้าใจ
+- เมื่อถามเรื่องจีรัง ให้ตอบสั้นๆ ไม่ต้องยาว
+
+คุณทำงานที่ ${k.shortName} ในแม่ริม เชียงใหม่ 
+หลักการ: ${k.philosophy}
+
+เมื่อถามเรื่องจีรัง: ตอบสั้นๆ เน้นหลักการดูแลสุขภาพ ไม่ต้องรายละเอียดโปรแกรม`;
 }

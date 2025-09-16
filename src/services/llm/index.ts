@@ -16,14 +16,13 @@ export {
 // Providers
 export { GeminiProvider, type GeminiConfig } from './geminiProvider';
 
-// System prompts
+// Prompt utilities
 export {
-  buildSystemPrompt,
   buildUserPrompt,
   getResponseDisclaimer,
   validateUserInput,
-  SAFETY_DISCLAIMERS,
-} from './systemPrompts';
+  formatThaiTextResponse,
+} from './promptUtils';
 
 // Re-export types from main types file
 export type {

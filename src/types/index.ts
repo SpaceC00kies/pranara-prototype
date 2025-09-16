@@ -218,7 +218,7 @@ export interface PIIScrubbingResult {
 // ============================================================================
 
 export interface SafetySetting {
-  category: 'HARM_CATEGORY_MEDICAL' | 'HARM_CATEGORY_DANGEROUS_CONTENT' | 'HARM_CATEGORY_HARASSMENT' | 'HARM_CATEGORY_HATE_SPEECH';
+  category: 'HARM_CATEGORY_DANGEROUS_CONTENT' | 'HARM_CATEGORY_HARASSMENT' | 'HARM_CATEGORY_HATE_SPEECH' | 'HARM_CATEGORY_SEXUALLY_EXPLICIT';
   threshold: 'BLOCK_NONE' | 'BLOCK_LOW_AND_ABOVE' | 'BLOCK_MEDIUM_AND_ABOVE' | 'BLOCK_HIGH_AND_ABOVE';
 }
 
@@ -255,7 +255,7 @@ export interface ErrorResponse {
   timestamp: Date;
 }
 
-export type ErrorCode = 
+export type ErrorCode =
   | 'GEMINI_UNAVAILABLE'
   | 'RATE_LIMIT_EXCEEDED'
   | 'INVALID_INPUT'
@@ -420,17 +420,17 @@ export interface GeminiError {
 // TOPIC CLASSIFICATION
 // ============================================================================
 
-export type TopicCategory = 
-  | 'alzheimer' 
-  | 'fall' 
-  | 'sleep' 
-  | 'diet' 
-  | 'night_care' 
-  | 'post_op' 
-  | 'diabetes' 
-  | 'mood' 
-  | 'medication' 
-  | 'emergency' 
+export type TopicCategory =
+  | 'stress'
+  | 'mindfulness'
+  | 'nutrition'
+  | 'exercise'
+  | 'mental_health'
+  | 'relationships'
+  | 'work_life_balance'
+  | 'spirituality'
+  | 'sleep'
+  | 'mood'
   | 'general';
 
 export interface TopicKeywords {

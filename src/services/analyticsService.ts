@@ -3,11 +3,11 @@
  * Handles PII-safe data collection, topic classification, and conversation flow tracking
  */
 
-import { 
-  AnalyticsEvent, 
-  AnalyticsLog, 
-  TopicCategory, 
-  TopicAnalytics, 
+import {
+  AnalyticsEvent,
+  AnalyticsLog,
+  TopicCategory,
+  TopicAnalytics,
   UsageStats,
   TopicClassificationResult,
   AgeRange,
@@ -19,49 +19,49 @@ import { createSessionHash } from './sessionService';
 
 // Topic classification keywords
 const TOPIC_KEYWORDS: Record<TopicCategory, { th: string[], en: string[] }> = {
-  alzheimer: {
-    th: ['อัลไซเมอร์', 'ความจำ', 'ลืม', 'สับสน', 'จำไม่ได้', 'หลงลืม', 'สมองเสื่อม'],
-    en: ['alzheimer', 'memory', 'forget', 'confusion', 'dementia', 'cognitive']
+  stress: {
+    th: ['เครียด', 'กดดัน', 'วิตกกังวล', 'ปวดหัว', 'นอนไม่หลับจากเครียด', 'ความกังวล', 'ตึงเครียด'],
+    en: ['stress', 'pressure', 'anxiety', 'worried', 'tension', 'overwhelmed', 'burnout']
   },
-  fall: {
-    th: ['ล้ม', 'หกล้ม', 'ลื่น', 'เดิน', 'ขาอ่อน', 'เซ', 'ไม่มั่นคง', 'ดุลยภาพ'],
-    en: ['fall', 'slip', 'balance', 'walking', 'unsteady', 'dizzy', 'weak legs']
+  mindfulness: {
+    th: ['สติ', 'สมาธิ', 'ปัจจุบัน', 'จิตใจ', 'ความสงบ', 'เจริญสติ', 'ทำสมาธิ', 'วิปัสสนา'],
+    en: ['mindfulness', 'meditation', 'present', 'awareness', 'calm', 'peace', 'focus', 'zen']
+  },
+  nutrition: {
+    th: ['อาหาร', 'โภชนาการ', 'วิตามิน', 'สุขภาพ', 'กิน', 'น้ำหนัก', 'อาหารเสริม', 'คลีน'],
+    en: ['nutrition', 'food', 'diet', 'healthy eating', 'vitamins', 'supplements', 'organic', 'clean eating']
+  },
+  exercise: {
+    th: ['ออกกำลัง', 'วิ่ง', 'เดิน', 'โยคะ', 'กีฬา', 'ฟิตเนส', 'เคลื่อนไหว', 'ยืดเหยียด'],
+    en: ['exercise', 'workout', 'fitness', 'yoga', 'running', 'gym', 'sports', 'movement', 'stretching']
+  },
+  mental_health: {
+    th: ['สุขภาพจิต', 'จิตใจ', 'อารมณ์', 'ความสุข', 'เศร้า', 'ซึมเศร้า', 'ความรู้สึก'],
+    en: ['mental health', 'wellbeing', 'happiness', 'depression', 'emotions', 'feelings', 'psychological']
+  },
+  relationships: {
+    th: ['ความสัมพันธ์', 'เพื่อน', 'ครอบครัว', 'คู่รัก', 'การสื่อสาร', 'ทะเลาะ', 'เข้าใจ'],
+    en: ['relationships', 'family', 'friends', 'partner', 'communication', 'conflict', 'love', 'connection']
+  },
+  work_life_balance: {
+    th: ['งาน', 'ทำงาน', 'สมดุล', 'เวลา', 'พักผ่อน', 'ชีวิต', 'การทำงาน', 'ออฟฟิศ'],
+    en: ['work', 'job', 'career', 'balance', 'time management', 'productivity', 'office', 'workplace']
+  },
+  spirituality: {
+    th: ['จิตวิญญาณ', 'ธรรม', 'พุทธ', 'บุญ', 'กรรม', 'ปรัชญา', 'ความหมาย', 'จุดประสงค์'],
+    en: ['spirituality', 'purpose', 'meaning', 'philosophy', 'wisdom', 'enlightenment', 'soul', 'faith']
   },
   sleep: {
-    th: ['นอน', 'หลับ', 'นอนไม่หลับ', 'ตื่น', 'ฝันร้าย', 'กรน', 'นอนกลางวัน'],
-    en: ['sleep', 'insomnia', 'wake up', 'nightmare', 'snoring', 'nap', 'rest']
-  },
-  diet: {
-    th: ['อาหาร', 'กิน', 'น้ำ', 'หิว', 'อิ่ม', 'ลดน้ำหนัก', 'โภชนาการ', 'วิตามิน'],
-    en: ['food', 'eat', 'drink', 'nutrition', 'diet', 'vitamin', 'meal', 'appetite']
-  },
-  night_care: {
-    th: ['กลางคืน', 'ดึก', 'ตื่นกลางคืน', 'ห้องน้ำ', 'กลัวมืด', 'นอนคนเดียว'],
-    en: ['night', 'midnight', 'bathroom', 'dark', 'alone', 'evening care']
-  },
-  post_op: {
-    th: ['หลังผ่าตัด', 'แผล', 'ฟื้นตัว', 'ยา', 'เจ็บ', 'บาดแผล', 'รักษา'],
-    en: ['surgery', 'wound', 'recovery', 'post-op', 'healing', 'treatment', 'operation']
-  },
-  diabetes: {
-    th: ['เบาหวาน', 'น้ำตาล', 'อินซูลิน', 'เท้า', 'แผลไม่หาย', 'ระดับน้ำตาล'],
-    en: ['diabetes', 'sugar', 'insulin', 'blood sugar', 'diabetic', 'glucose']
+    th: ['นอน', 'หลับ', 'นอนไม่หลับ', 'ตื่น', 'ฝัน', 'พักผ่อน', 'นอนหลับ', 'คุณภาพการนอน'],
+    en: ['sleep', 'insomnia', 'rest', 'dreams', 'sleep quality', 'bedtime', 'tired', 'fatigue']
   },
   mood: {
-    th: ['เศร้า', 'เหงา', 'โกรธ', 'หงุดหงิด', 'อารมณ์', 'ร้องไห้', 'เครียด'],
-    en: ['sad', 'lonely', 'angry', 'mood', 'depression', 'emotional', 'stress']
-  },
-  medication: {
-    th: ['ยา', 'กิน', 'ลืมกิน', 'ข้างเคียง', 'แพ้', 'ปฏิกิริยา', 'ขนาด'],
-    en: ['medication', 'medicine', 'pills', 'dosage', 'side effects', 'allergic']
-  },
-  emergency: {
-    th: ['ฉุกเฉิน', 'หมดสติ', 'หายใจไม่ออก', 'เจ็บหน้าอก', 'ชัก', 'เลือดออก', '1669'],
-    en: ['emergency', 'unconscious', 'chest pain', 'bleeding', 'seizure', 'breathing']
+    th: ['อารมณ์', 'ความรู้สึก', 'เศร้า', 'เหงา', 'โกรธ', 'หงุดหงิด', 'ร้องไห้', 'ดีใจ'],
+    en: ['mood', 'emotions', 'feelings', 'sad', 'happy', 'angry', 'emotional', 'upset']
   },
   general: {
-    th: ['ดูแล', 'ช่วยเหลือ', 'คำแนะนำ', 'วิธี', 'ทำอย่างไร'],
-    en: ['care', 'help', 'advice', 'how to', 'general', 'support']
+    th: ['ช่วยเหลือ', 'คำแนะนำ', 'วิธี', 'ทำอย่างไร', 'ปรึกษา', 'แนะนำ', 'สนับสนุน'],
+    en: ['help', 'advice', 'guidance', 'support', 'how to', 'general', 'assistance', 'consultation']
   }
 };
 
@@ -70,41 +70,62 @@ const TOPIC_KEYWORDS: Record<TopicCategory, { th: string[], en: string[] }> = {
  */
 export function classifyTopic(message: string): TopicClassificationResult {
   const lowerMessage = message.toLowerCase();
+
+  // Check for consultation requests FIRST - return 'general' for these
+  const consultationKeywords = ['ปรึกษา', 'ขอคำแนะนำ', 'ช่วยหน่อย', 'อยากถาม'];
+  if (consultationKeywords.some(keyword => message.includes(keyword))) {
+    // Unless they mention specific medical terms, it's just general consultation
+    const hasMedicalTerms = Object.entries(TOPIC_KEYWORDS)
+      .filter(([topic]) => topic !== 'general')
+      .some(([, keywords]) => {
+        const allKeywords = [...keywords.th, ...keywords.en];
+        return allKeywords.some(term => message.includes(term));
+      });
+
+    if (!hasMedicalTerms) {
+      return {
+        topic: 'general',
+        confidence: 0.8,
+        keywords: ['ปรึกษา']
+      };
+    }
+  }
+
   const scores: Record<TopicCategory, number> = {} as Record<TopicCategory, number>;
-  
+
   // Initialize scores
   Object.keys(TOPIC_KEYWORDS).forEach(topic => {
     scores[topic as TopicCategory] = 0;
   });
-  
+
   // Score each topic based on keyword matches
   Object.entries(TOPIC_KEYWORDS).forEach(([topic, keywords]) => {
     const allKeywords = [...keywords.th, ...keywords.en];
     const matchedKeywords: string[] = [];
-    
+
     allKeywords.forEach(keyword => {
       if (lowerMessage.includes(keyword.toLowerCase())) {
         scores[topic as TopicCategory] += 1;
         matchedKeywords.push(keyword);
       }
     });
-    
+
     // Store matched keywords for the highest scoring topic
     if (scores[topic as TopicCategory] > 0) {
       (scores as Record<string, unknown>)[`${topic}_keywords`] = matchedKeywords;
     }
   });
-  
+
   // Find the topic with highest score
   const topTopic = Object.entries(scores)
     .filter(([key]) => !key.includes('_keywords'))
-    .reduce((max, [topic, score]) => 
+    .reduce((max, [topic, score]) =>
       score > max.score ? { topic: topic as TopicCategory, score } : max,
       { topic: 'general' as TopicCategory, score: 0 }
     );
-  
+
   const matchedKeywords = (scores as Record<string, unknown>)[`${topTopic.topic}_keywords`] as string[] || [];
-  
+
   return {
     topic: topTopic.topic,
     confidence: Math.min(topTopic.score / 3, 1), // Normalize to 0-1
@@ -127,7 +148,7 @@ export function createAnalyticsEvent(
   // Scrub PII from message and truncate to 160 characters
   const scrubbedResult = scrubPII(message);
   const textSnippet = scrubbedResult.scrubbedText.substring(0, 160);
-  
+
   return {
     sessionId: createSessionHash(sessionId), // Use hashed session ID
     timestamp: new Date(),
@@ -179,9 +200,9 @@ export function logToEventFormat(log: AnalyticsLog): AnalyticsEvent {
  */
 export function calculateTopicAnalytics(logs: AnalyticsLog[]): TopicAnalytics[] {
   if (logs.length === 0) return [];
-  
+
   const topicCounts: Record<string, { total: number; lineClicks: number }> = {};
-  
+
   // Count occurrences and line clicks per topic
   logs.forEach(log => {
     if (!topicCounts[log.topic]) {
@@ -192,7 +213,7 @@ export function calculateTopicAnalytics(logs: AnalyticsLog[]): TopicAnalytics[] 
       topicCounts[log.topic].lineClicks += 1;
     }
   });
-  
+
   // Convert to analytics format
   return Object.entries(topicCounts)
     .map(([topic, counts]) => ({
@@ -218,16 +239,16 @@ export function calculateUsageStats(logs: AnalyticsLog[]): UsageStats {
       averageResponseTime: 0
     };
   }
-  
+
   const uniqueSessions = new Set(logs.map(log => log.session_id)).size;
   const lineClicks = logs.filter(log => log.line_clicked).length;
   const languageCounts: Record<string, number> = {};
-  
+
   // Count languages
   logs.forEach(log => {
     languageCounts[log.language] = (languageCounts[log.language] || 0) + 1;
   });
-  
+
   return {
     totalQuestions: logs.length,
     uniqueSessions,
@@ -259,7 +280,7 @@ export interface ConversationFlow {
  */
 export function analyzeConversationFlow(sessionLogs: AnalyticsLog[]): ConversationFlow[] {
   const sessionGroups: Record<string, AnalyticsLog[]> = {};
-  
+
   // Group logs by session
   sessionLogs.forEach(log => {
     if (!sessionGroups[log.session_id]) {
@@ -267,22 +288,22 @@ export function analyzeConversationFlow(sessionLogs: AnalyticsLog[]): Conversati
     }
     sessionGroups[log.session_id].push(log);
   });
-  
+
   // Analyze each session
   return Object.entries(sessionGroups).map(([sessionId, logs]) => {
     const sortedLogs = logs.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
     const firstLog = sortedLogs[0];
     const lastLog = sortedLogs[sortedLogs.length - 1];
-    
+
     const steps = sortedLogs.map((log, index) => ({
       step: index + 1,
       topic: log.topic as TopicCategory,
       timestamp: log.timestamp,
       lineHandoff: log.line_clicked
     }));
-    
+
     const duration = (lastLog.timestamp.getTime() - firstLog.timestamp.getTime()) / (1000 * 60);
-    
+
     return {
       sessionId,
       steps,
@@ -306,21 +327,21 @@ export function getCommonPatterns(flows: ConversationFlow[]): Array<{
     flows: ConversationFlow[];
     lineHandoffs: number;
   }> = {};
-  
+
   flows.forEach(flow => {
     const topicSequence = flow.steps.map(step => step.topic);
     const patternKey = topicSequence.join(' -> ');
-    
+
     if (!patterns[patternKey]) {
       patterns[patternKey] = { flows: [], lineHandoffs: 0 };
     }
-    
+
     patterns[patternKey].flows.push(flow);
     if (flow.endedWithLineHandoff) {
       patterns[patternKey].lineHandoffs += 1;
     }
   });
-  
+
   return Object.entries(patterns)
     .map(([patternKey, data]) => ({
       pattern: patternKey.split(' -> ') as TopicCategory[],

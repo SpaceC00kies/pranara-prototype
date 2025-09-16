@@ -9,83 +9,81 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Primary palette - Calming healthcare blues
+        // Modern Calm Palette - Minimal, airy, contemporary
         primary: {
-          50: '#E9F2FC',
-          100: '#D3E5F9',
-          200: '#A7CBF3',
-          300: '#7BB1ED',
-          400: '#4F97E7',
-          500: '#4A90E2', // Main primary blue - calming and trustworthy
-          600: '#357ABD',
-          700: '#2A6298',
-          800: '#1F4A73',
-          900: '#14324E',
+          50: '#F0FDFA',       // Lightest seafoam
+          100: '#CCFBF1',      // Very light seafoam
+          200: '#99F6E4',      // Light seafoam
+          300: '#5EEAD4',      // Seafoam Green - PRIMARY
+          400: '#2DD4BF',      // Medium seafoam
+          500: '#14B8A6',      // Deeper seafoam
+          600: '#0D9488',      // Dark seafoam
+          700: '#0F766E',      // Darker seafoam
+          800: '#115E59',      // Very dark seafoam
+          900: '#134E4A',      // Darkest seafoam
         },
         
-        // Health-focused colors - Nature-inspired wellness palette
-        health: {
-          green: '#10b981',    // Fresh, vibrant green for positive health indicators
-          mint: '#6EE7B7',     // Soft mint for gentle accents
-          sage: '#A7F3D0',     // Calming sage for backgrounds
+        // Modern Calm Colors
+        seafoam: '#5EEAD4',    // Light, refreshing primary
+        skyMist: '#E0F2F1',    // Airy background
+        slateGrey: '#334155',   // Modern, grounding
+        softGold: '#D4AF37',    // Highlight accent
+        
+        // Pranara's signature color - Seafoam Green
+        pranara: {
+          light: '#CCFBF1',    // Light seafoam for backgrounds
+          main: '#5EEAD4',     // Main Pranara color - Seafoam Green
+          dark: '#2DD4BF',     // Darker for hover states
         },
         
-        // Warm support colors - Comforting and approachable
-        warm: {
-          peach: '#FED7AA',    // Gentle peach for warmth
-          coral: '#FCA5A5',    // Soft coral for friendly highlights
-          lavender: '#E9D5FF', // Calming lavender for serenity
-        },
-        
-        // Modern neutral palette - Sophisticated grays with warmth
+        // Modern neutral palette - Clean and minimal
         neutral: {
-          50: '#FAFAFA',       // Pure white with hint of warmth
-          100: '#F5F5F5',      // Light gray for backgrounds
+          50: '#FAFAFA',       // Pure white
+          100: '#F5F5F5',      // Light gray
           200: '#E5E5E5',      // Subtle borders
           300: '#D4D4D4',      // Light borders
           400: '#A3A3A3',      // Muted text
           500: '#737373',      // Secondary text
           600: '#525252',      // Primary text light
-          700: '#404040',      // Primary text
+          700: '#334155',      // Slate Grey - grounding
           800: '#262626',      // Dark text
           900: '#171717',      // Darkest text
         },
         
-        // Text hierarchy - Clear information architecture
+        // Text hierarchy - Modern and clean
         text: {
-          primary: '#1a202c',    // Dark, high contrast for main content
-          secondary: '#4a5568',  // Medium contrast for secondary content
-          muted: '#9CA3AF',      // Low contrast for supporting text
+          primary: '#334155',    // Slate Grey for main content
+          secondary: '#64748B',  // Medium slate for secondary content
+          muted: '#94A3B8',      // Light slate for supporting text
           light: '#E2E8F0',      // Light text for dark backgrounds
         },
         
-        // Border colors - Subtle and health-focused
-        border: {
-          light: '#E2E8F0',     // Light borders
-          medium: '#CBD5E0',    // Medium borders
-          dark: '#A0AEC0',      // Dark borders
-        },
-        
-        // Background gradients and surfaces
-        surface: {
+        // Background system - Airy and minimal
+        background: {
           primary: '#FFFFFF',    // Pure white
-          secondary: '#F7FAFC',  // Off-white
-          tertiary: '#EDF2F7',   // Light gray
+          secondary: '#E0F2F1',  // Sky Mist - airy background
+          tertiary: '#F8FAFC',   // Very light slate
         },
         
-        // Status colors - Healthcare appropriate
-        status: {
-          success: '#10b981',    // Green for success/healthy
-          warning: '#F59E0B',    // Amber for caution
-          error: '#EF4444',      // Red for errors/urgent
-          info: '#3B82F6',       // Blue for information
+        // Accent colors - Refined highlights
+        accent: {
+          gold: '#D4AF37',       // Soft Gold for highlights
+          seafoam: '#5EEAD4',    // Seafoam for primary actions
+          mist: '#E0F2F1',       // Sky Mist for subtle accents
         },
       },
       
-      // Thai-optimized typography
+      // Typography with Fontshare fonts
       fontFamily: {
+        // Keep existing Thai fonts
         prompt: ['Prompt', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
         sarabun: ['Sarabun', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        
+        // Add Fontshare fonts
+        satoshi: ['Satoshi', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        general: ['General Sans', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        cabinet: ['Cabinet Grotesk', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        boska: ['Boska', 'ui-serif', 'Georgia', 'serif'],
       },
       
       // Enhanced spacing system

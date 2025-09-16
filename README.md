@@ -18,8 +18,8 @@ An AI-powered web application that provides Thai families with immediate, practi
 - **Framework**: Next.js 14 with App Router
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS with HAJOBJA design system tokens
-- **AI**: Google Gemini Flash API with safety settings
-- **Database**: Vercel KV (primary) or Vercel Postgres (alternative)
+- **AI**: Google Gemini 1.5 Pro via Vertex AI
+- **Database**: PostgreSQL (Neon)
 - **Deployment**: Vercel with edge functions
 - **Testing**: Vitest with React Testing Library
 - **Fonts**: Prompt & Sarabun (Thai-optimized)

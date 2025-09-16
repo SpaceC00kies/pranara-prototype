@@ -12,8 +12,6 @@ import {
   LLMError,
   TopicCategory,
   SafetyCheckResult,
-  MCPAnalysisRequest,
-  MCPAnalysisResponse,
   UserProfile,
   AppMode
 } from '../../types';
@@ -31,11 +29,18 @@ import {
   getResponseDisclaimer, 
   validateUserInput,
   formatThaiTextResponse
-} from './systemPrompts';
+} from './promptUtils';
+// Complex conversation patterns removed - letting Gemini 2.5 handle variation naturally
+import { 
+  conversationHistoryService, 
+  createChatMessage,
+  ConversationContext 
+} from '../conversationHistoryService';
+
+// Sanitization logic moved to system prompt for better LLM-native handling
 import { 
   shouldRecommendLineHandoff
 } from '../lineService';
-import { healthIntelligenceService } from '../healthIntelligenceService';
 import { getUserProfile } from '../userProfileService';
 
 // ============================================================================
@@ -64,7 +69,6 @@ export interface AIServiceResponse {
     completionTokens: number;
     totalTokens: number;
   };
-  mcpAnalysis?: MCPAnalysisResponse;
   mode?: AppMode;
 }
 
@@ -87,6 +91,7 @@ export class AIService {
    * @param conversationLength - Number of messages in conversation (for LINE handoff logic)
    * @param mode - App mode (conversation or intelligence)
    * @param userProfile - User profile for demographic-aware responses
+   * @param conversationContext - Optional conversation context to avoid repetition
    * @returns Promise<AIServiceResponse> - Complete response with metadata
    */
   async processMessage(
@@ -95,7 +100,8 @@ export class AIService {
     language: 'th' | 'en' = 'th',
     conversationLength: number = 1,
     mode: AppMode = 'conversation',
-    userProfile?: UserProfile
+    userProfile?: UserProfile,
+    conversationContext?: ConversationContext
   ): Promise<AIServiceResponse> {
     try {
       // Step 1: Validate and sanitize input
@@ -124,67 +130,74 @@ export class AIService {
       const topic = classifyTopic(validatedMessage);
       
       // Step 5: Get or use provided user profile
-      const profile = userProfile || await getUserProfile(sessionId);
+      const profile = userProfile || await getUserProfile(sessionId) || undefined;
       
-      // Step 6: Use Health Intelligence service for enhanced analysis (if in intelligence mode)
-      let mcpAnalysis: MCPAnalysisResponse | undefined;
-      let enhancedResponse: string;
+      // Step 6: Use provided conversation context or get from service
+      const contextToUse = conversationContext || conversationHistoryService.getConversationContext(sessionId);
       
-      if (mode === 'intelligence') {
-        try {
-          // Create MCP analysis request
-          const mcpRequest: MCPAnalysisRequest = {
-            message: validatedMessage,
-            context: {
-              userProfile: profile,
-              currentMode: mode,
-              sessionMetadata: {
-                sessionId,
-                messageCount: conversationLength,
-                duration: 0, // Would be calculated in real implementation
-                language
-              }
-            },
-            analysisType: 'health-intelligence'
-          };
-          
-          // Perform MCP-powered analysis
-          mcpAnalysis = await healthIntelligenceService.analyzeHealthQuery(mcpRequest);
-          enhancedResponse = mcpAnalysis.response;
-          
-        } catch (error) {
-          console.warn('Health Intelligence analysis failed, falling back to standard AI:', error);
-          // Fall back to standard AI processing
-          const prompt = buildUserPrompt(validatedMessage, topic, language, profile, mode);
-          const llmResponse = await this.generateWithRetry(prompt);
-          enhancedResponse = llmResponse.content;
+      // Step 7: Generate AI response using the working buildUserPrompt (keep it simple and working)
+      const prompt = buildUserPrompt(
+        validatedMessage, 
+        topic, 
+        language, 
+        profile, 
+        mode,
+        {
+          recentMessages: contextToUse.recentMessages,
+          recentResponsePatterns: contextToUse.recentResponsePatterns,
+          conversationLength: contextToUse.conversationLength
         }
-      } else {
-        // Standard conversation mode processing
-        const prompt = buildUserPrompt(validatedMessage, topic, language, profile, mode);
-        const llmResponse = await this.generateWithRetry(prompt);
-        enhancedResponse = llmResponse.content;
-      }
+      );
+      const llmResponse = await this.generateWithRetry(prompt, sessionId);
+      const validatedResponse = await this.validateAndRegenerateIfRepetitive(
+        llmResponse.content,
+        sessionId,
+        prompt
+      );
+      const enhancedResponse = validatedResponse;
       
-      // Step 7: Determine LINE handoff recommendation
+      // Step 8: Determine LINE handoff recommendation
       const lineHandoffRecommendation = shouldRecommendLineHandoff(
         validatedMessage,
         topic,
-        conversationLength
+        contextToUse.conversationLength
       );
 
-      // Step 8: Process and format response
+      // Step 9: Response is already optimized by improved system prompt
+      const sanitizedResponse = enhancedResponse;
+      
+      // Step 10: Process and format response
       const formattedResponse = this.formatResponse(
-        enhancedResponse,
+        sanitizedResponse,
         topic,
         language,
         validation.recommendLineHandoff || lineHandoffRecommendation.shouldRecommend,
         mode
       );
 
+      // Step 11: Store conversation history (only if not provided externally)
+      if (!conversationContext) {
+        // Add user message
+        conversationHistoryService.addMessage(
+          sessionId,
+          createChatMessage(validatedMessage, 'user', topic)
+        );
+        
+        // Add assistant response
+        conversationHistoryService.addMessage(
+          sessionId,
+          createChatMessage(
+            formattedResponse, 
+            'assistant', 
+            topic, 
+            validation.recommendLineHandoff || processingResult.safetyResult.recommendLineHandoff || lineHandoffRecommendation.shouldRecommend
+          )
+        );
+      }
+
       return {
         response: formattedResponse,
-        topic: mcpAnalysis?.topic || topic,
+        topic: topic,
         showLineOption: validation.recommendLineHandoff || 
                        processingResult.safetyResult.recommendLineHandoff ||
                        lineHandoffRecommendation.shouldRecommend,
@@ -192,13 +205,8 @@ export class AIService {
         processingResult,
         lineHandoffReason: lineHandoffRecommendation.reason,
         lineHandoffUrgency: lineHandoffRecommendation.urgency,
-        mcpAnalysis,
         mode,
-        usage: {
-          promptTokens: 0, // Would be tracked from actual LLM calls
-          completionTokens: 0,
-          totalTokens: 0
-        }
+        usage: llmResponse.usage
       };
 
     } catch (error) {
@@ -243,18 +251,42 @@ export class AIService {
   // ============================================================================
 
   /**
+   * Simplified validation - let the improved system prompt handle repetition avoidance
+   */
+  private async validateAndRegenerateIfRepetitive(
+    response: string,
+    sessionId: string,
+    prompt: string,
+    attemptCount: number = 0
+  ): Promise<string> {
+    // The improved system prompt with explicit anti-repetition instructions
+    // should handle variation naturally. Only regenerate for truly identical responses.
+    const isIdentical = conversationHistoryService.isRepetitiveResponse(sessionId, response);
+    
+    if (isIdentical && attemptCount < 1) { // Reduced from 3 attempts to 1
+      console.log(`🔄 Response was identical, regenerating once`);
+      
+      // Simple regeneration with slightly higher temperature
+      const newResponse = await this.generateWithRetry(prompt, sessionId);
+      return newResponse.content;
+    }
+
+    return response;
+  }
+
+  /**
    * Generates response with retry logic
    * @param prompt - The prompt to send to LLM
    * @returns Promise<LLMResponse> - LLM response
    */
-  private async generateWithRetry(prompt: string): Promise<LLMResponse> {
+  private async generateWithRetry(prompt: string, sessionId?: string): Promise<LLMResponse> {
     let lastError: LLMError | null = null;
     
     for (let attempt = 0; attempt <= this.config.maxRetries; attempt++) {
       try {
         return await this.config.llmProvider.generateResponse(
           prompt, 
-          this.config.defaultLLMConfig
+          { ...this.config.defaultLLMConfig, sessionId }
         );
       } catch (error) {
         lastError = error as LLMError;
@@ -342,14 +374,14 @@ export class AIService {
       formattedResponse += '\n\n' + disclaimer;
     }
 
-    // Add LINE handoff suggestion for complex topics
-    if (recommendLineHandoff && topic !== 'emergency') {
-      const lineMessage = language === 'th'
-        ? '\n\nหากต้องการคำแนะนำเพิ่มเติม สามารถติดต่อทีมงานผ่าน LINE ได้เลยค่ะ'
-        : '\n\nFor additional guidance, you can contact our team via LINE.';
-      
-      formattedResponse += lineMessage;
-    }
+    // LINE handoff message disabled - Pranara handles this naturally in conversation
+    // if (recommendLineHandoff && (topic === 'emergency' || topic === 'medication')) {
+    //   const lineMessage = language === 'th'
+    //     ? '\n\nหากต้องการคำแนะนำเพิ่มเติม สามารถติดต่อทีมงานผ่าน LINE ได้เลยค่ะ'
+    //     : '\n\nFor additional guidance, you can contact our team via LINE.';
+    //   
+    //   formattedResponse += lineMessage;
+    // }
 
     // Add mode switching suggestion for conversation mode
     if (mode === 'conversation' && (topic === 'alzheimer' || topic === 'diabetes' || topic === 'medication')) {
@@ -434,8 +466,8 @@ export function createDefaultAIConfig(llmProvider: LLMProvider): AIServiceConfig
           threshold: 'BLOCK_MEDIUM_AND_ABOVE'
         },
         {
-          category: 'HARM_CATEGORY_MEDICAL',
-          threshold: 'BLOCK_NONE' // Allow medical content but with disclaimers
+          category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE'
         }
       ]
     },

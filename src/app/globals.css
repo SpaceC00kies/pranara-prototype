@@ -1,4 +1,39 @@
+/* Google Fonts - Thai support */
 @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap');
+
+/* Fontshare - Premium fonts */
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,600,700&f[]=general-sans@300,400,500,600,700&f[]=cabinet-grotesk@300,400,500,600,700&display=swap');
+
+/* Local Boska Font - Premium serif for branding */
+@font-face {
+  font-family: 'Boska';
+  src: url('/Boska/Fonts/WEB/fonts/Boska-Regular.woff2') format('woff2'),
+       url('/Boska/Fonts/WEB/fonts/Boska-Regular.woff') format('woff'),
+       url('/Boska/Fonts/WEB/fonts/Boska-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Boska';
+  src: url('/Boska/Fonts/WEB/fonts/Boska-Medium.woff2') format('woff2'),
+       url('/Boska/Fonts/WEB/fonts/Boska-Medium.woff') format('woff'),
+       url('/Boska/Fonts/WEB/fonts/Boska-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-display: swap;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Boska';
+  src: url('/Boska/Fonts/WEB/fonts/Boska-Bold.woff2') format('woff2'),
+       url('/Boska/Fonts/WEB/fonts/Boska-Bold.woff') format('woff'),
+       url('/Boska/Fonts/WEB/fonts/Boska-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-display: swap;
+  font-style: normal;
+}
 
 @tailwind base;
 @tailwind components;
@@ -164,7 +199,7 @@ body {
 }
 
 .chat-text p {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0;
 }
 
 .chat-text p:last-child {
@@ -173,14 +208,14 @@ body {
 
 /* Better paragraph spacing for multi-line messages */
 .chat-message-content {
-  line-height: 1.65;
+  line-height: 1.4;
   word-break: break-word;
   overflow-wrap: break-word;
   hyphens: auto;
 }
 
 .chat-message-content > * + * {
-  margin-top: 0.75rem;
+  margin-top: 0;
 }
 
 /* Mobile-optimized text spacing */

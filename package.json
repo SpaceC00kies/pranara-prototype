@@ -32,7 +32,8 @@
     "kv:migrate": "node scripts/migrate-to-postgres.js"
   },
   "dependencies": {
-    "@google/genai": "^1.17.0",
+    "@google-cloud/vertexai": "^1.9.0",
+    "@google/generative-ai": "^0.24.1",
     "autoprefixer": "^10.4.21",
     "dotenv": "^17.2.2",
     "next": "15.5.2",
@@ -50,6 +51,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitest/ui": "^3.2.4",
+    "axe-playwright": "^2.0.1",
     "eslint": "^9",
     "eslint-config-next": "15.5.2",
     "jest-axe": "^10.0.0",
@@ -58,7 +60,6 @@
     "postcss": "^8.5.6",
     "typescript": "^5",
     "vitest": "^3.2.4",
-    "webpack-bundle-analyzer": "^4.10.1",
-    "axe-playwright": "^2.0.1"
+    "webpack-bundle-analyzer": "^4.10.1"
   }
 }

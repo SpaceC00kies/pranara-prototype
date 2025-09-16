@@ -13,7 +13,7 @@ import {
   TopicCategory
 } from '../../../types';
 import { AIService, createAIService } from '../../../services/llm/aiService';
-import { createGeminiProvider } from '../../../services/llm/geminiProvider';
+import { GeminiDirectProvider } from '../../../services/llm/geminiDirectProvider';
 import { getDatabase } from '../../../services/databaseService';
 import { createAnalyticsEvent } from '../../../services/analyticsService';
 import {
@@ -32,6 +32,10 @@ import {
 } from '../../../services/fallbackService';
 import { retryApiCall } from '../../../services/retryService';
 import { getUserProfile } from '../../../services/userProfileService';
+import { 
+  conversationHistoryService, 
+  createChatMessage 
+} from '../../../services/conversationHistoryService';
 
 // Initialize AI service and fallback service
 let aiService: AIService | null = null;
@@ -39,7 +43,7 @@ const fallbackService = FallbackService.getInstance();
 
 function getAIService(): AIService {
   if (!aiService) {
-    const geminiProvider = createGeminiProvider();
+    const geminiProvider = new GeminiDirectProvider();
     aiService = createAIService(geminiProvider);
   }
   return aiService;
@@ -76,6 +80,13 @@ export async function POST(request: NextRequest) {
     // Get user profile for demographic-aware responses
     const userProfile = await getUserProfile(validSessionId) || undefined;
 
+    // Add user message to conversation history
+    const userMessage = createChatMessage(message, 'user', classifyJirungTopic(message) as TopicCategory);
+    conversationHistoryService.addMessage(validSessionId, userMessage);
+
+    // Get conversation context for repetition detection
+    const conversationContext = conversationHistoryService.getConversationContext(validSessionId);
+
     // For Jirung queries, we'll handle context in the system prompt instead
     // to avoid triggering greeting responses
     const enhancedMessage = message;
@@ -86,12 +97,11 @@ export async function POST(request: NextRequest) {
     
     try {
       const ai = getAIService();
-      // Note: In a real implementation, you'd track conversation length per session
-      // For now, we'll use a simple heuristic based on message content
-      const conversationLength = 1; // This should be tracked per session in production
+      // Use actual conversation length from history
+      const conversationLength = conversationContext.conversationLength;
       
       aiResponse = await retryApiCall(
-        () => ai.processMessage(enhancedMessage, validSessionId, language, conversationLength, mode, userProfile),
+        () => ai.processMessage(enhancedMessage, validSessionId, language, conversationLength, mode, userProfile, conversationContext),
         'ai-process-message',
         {
           maxAttempts: 2,
@@ -126,8 +136,8 @@ export async function POST(request: NextRequest) {
         const fallbackResponse = fallbackService.getContextualFallback(
           topicCategory as TopicCategory,
           language,
-          1, // conversationLength - would be tracked in real implementation
-          [] // previous topics would be tracked in real implementation
+          conversationLength,
+          conversationContext.recentMessages.map(msg => msg.topic).filter(Boolean) as TopicCategory[]
         );
         
         aiResponse = {
@@ -159,14 +169,22 @@ export async function POST(request: NextRequest) {
       console.error('Analytics logging failed:', error);
     });
 
+    // Add assistant response to conversation history
+    const assistantMessage = createChatMessage(
+      aiResponse.response, 
+      'assistant', 
+      aiResponse.topic as TopicCategory,
+      aiResponse.showLineOption
+    );
+    conversationHistoryService.addMessage(validSessionId, assistantMessage);
+
     // Create response
     const chatResponse: ChatResponse = {
       response: aiResponse.response,
       topic: aiResponse.topic as TopicCategory,
       showLineOption: aiResponse.showLineOption,
       sessionId: validSessionId,
-      mode: aiResponse.mode || mode,
-      mcpAnalysis: aiResponse.mcpAnalysis
+      mode: aiResponse.mode || mode
     };
 
     // Add performance headers
