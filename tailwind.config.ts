@@ -11,31 +11,31 @@ const config: Config = {
       colors: {
         // Modern Calm Palette - Minimal, airy, contemporary
         primary: {
-          50: '#F0FDFA',       // Lightest seafoam
-          100: '#CCFBF1',      // Very light seafoam
-          200: '#99F6E4',      // Light seafoam
-          300: '#5EEAD4',      // Seafoam Green - PRIMARY
-          400: '#2DD4BF',      // Medium seafoam
-          500: '#14B8A6',      // Deeper seafoam
-          600: '#0D9488',      // Dark seafoam
-          700: '#0F766E',      // Darker seafoam
-          800: '#115E59',      // Very dark seafoam
-          900: '#134E4A',      // Darkest seafoam
+          50: '#F5F9F7',       // Lightest sage
+          100: '#E1EFEA',      // Very light sage - BACKGROUND
+          200: '#C3DFD3',      // Light sage
+          300: '#64AF9A',      // Sage Green - PRIMARY
+          400: '#5A9B87',      // Medium sage
+          500: '#4F8A78',      // Deeper sage
+          600: '#447969',      // Dark sage
+          700: '#39685A',      // Darker sage
+          800: '#2E574B',      // Very dark sage
+          900: '#23463C',      // Darkest sage
         },
-        
+
         // Modern Calm Colors
         seafoam: '#5EEAD4',    // Light, refreshing primary
         skyMist: '#E0F2F1',    // Airy background
         slateGrey: '#334155',   // Modern, grounding
         softGold: '#D4AF37',    // Highlight accent
-        
-        // Pranara's signature color - Seafoam Green
+
+        // Pranara's signature color - Sage Green
         pranara: {
-          light: '#CCFBF1',    // Light seafoam for backgrounds
-          main: '#5EEAD4',     // Main Pranara color - Seafoam Green
-          dark: '#2DD4BF',     // Darker for hover states
+          light: '#E1EFEA',    // Light sage for backgrounds
+          main: '#64AF9A',     // Main Pranara color - Sage Green
+          dark: '#5A9B87',     // Darker for hover states
         },
-        
+
         // Modern neutral palette - Clean and minimal
         neutral: {
           50: '#FAFAFA',       // Pure white
@@ -49,7 +49,7 @@ const config: Config = {
           800: '#262626',      // Dark text
           900: '#171717',      // Darkest text
         },
-        
+
         // Text hierarchy - Modern and clean
         text: {
           primary: '#334155',    // Slate Grey for main content
@@ -57,14 +57,14 @@ const config: Config = {
           muted: '#94A3B8',      // Light slate for supporting text
           light: '#E2E8F0',      // Light text for dark backgrounds
         },
-        
+
         // Background system - Airy and minimal
         background: {
           primary: '#FFFFFF',    // Pure white
           secondary: '#E0F2F1',  // Sky Mist - airy background
           tertiary: '#F8FAFC',   // Very light slate
         },
-        
+
         // Accent colors - Refined highlights
         accent: {
           gold: '#D4AF37',       // Soft Gold for highlights
@@ -72,23 +72,23 @@ const config: Config = {
           mist: '#E0F2F1',       // Sky Mist for subtle accents
         },
       },
-      
+
       // Typography with Fontshare fonts
       fontFamily: {
         // Keep existing Thai fonts
         prompt: ['Prompt', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
         sarabun: ['Sarabun', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
-        
+
         // Add Google fonts
         'space-mono': ['var(--font-space-mono)', 'monospace'],
-        
+
         // Add Fontshare fonts
         satoshi: ['Satoshi', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
         general: ['General Sans', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
         cabinet: ['Cabinet Grotesk', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
         boska: ['Boska', 'ui-serif', 'Georgia', 'serif'],
       },
-      
+
       // Enhanced spacing system
       spacing: {
         '18': '4.5rem',   // 72px
@@ -98,14 +98,14 @@ const config: Config = {
         '34': '8.5rem',   // 136px
         '38': '9.5rem',   // 152px
       },
-      
+
       // Modern border radius
       borderRadius: {
         '2xl': '1rem',     // 16px
         '3xl': '1.5rem',   // 24px
         '4xl': '2rem',     // 32px
       },
-      
+
       // Health-themed shadows with blue tints
       boxShadow: {
         'health-sm': '0 1px 2px 0 rgba(74, 144, 226, 0.05), 0 1px 3px 0 rgba(74, 144, 226, 0.1)',
@@ -115,7 +115,7 @@ const config: Config = {
         'chat': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
         'glow': '0 0 20px rgba(74, 144, 226, 0.15)',
       },
-      
+
       // Smooth animations for modern UX
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',
@@ -128,7 +128,7 @@ const config: Config = {
         'bounce-gentle': 'bounceGentle 1s ease-in-out',
         'scale-in': 'scaleIn 0.2s ease-out',
       },
-      
+
       // Comprehensive keyframes for organic animations
       keyframes: {
         fadeIn: {
@@ -170,12 +170,12 @@ const config: Config = {
           '100%': { transform: 'scale(1)', opacity: '1' },
         },
       },
-      
+
       // Enhanced backdrop blur
       backdropBlur: {
         xs: '2px',
       },
-      
+
       // Custom transitions
       transitionDuration: {
         '400': '400ms',
