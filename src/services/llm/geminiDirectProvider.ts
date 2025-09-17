@@ -58,11 +58,11 @@ export class GeminiDirectProvider implements LLMProvider {
     });
 
     if (!this.sessions.has(sessionId)) {
-      // Get history from conversationHistoryService (single source of truth)
-      const conversationHistory = conversationHistoryService.getHistory(sessionId);
-
+      // Get conversation context from conversationHistoryService (single source of truth)
+      const conversationContext = conversationHistoryService.getConversationContext(sessionId);
+      
       // Convert to Gemini format
-      const geminiHistory = conversationHistory.map(msg => ({
+      const geminiHistory = conversationContext.recentMessages.map(msg => ({
         role: msg.sender === 'user' ? 'user' as const : 'model' as const,
         parts: [{ text: msg.text }]
       }));
