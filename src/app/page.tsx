@@ -49,9 +49,19 @@ export default function Home() {
     console.log('🔑 Pranara session ID established:', sid);
   }, []); // Empty dependency array means this runs only once on mount
 
-  // Focus input on mount
+  // Prevent auto-focus on mobile Chrome (causes unwanted keyboard popup)
   useEffect(() => {
-    inputRef.current?.focus();
+    // Only focus on desktop, not on mobile devices
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isChrome = /Chrome/i.test(navigator.userAgent);
+
+    // Don't auto-focus on mobile Chrome as it causes unwanted keyboard popup
+    if (!isMobile || !isChrome) {
+      // Small delay to ensure the page is fully loaded
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+    }
   }, []);
 
   // Typing animation effect for placeholder
@@ -235,6 +245,7 @@ export default function Home() {
                 ref={inputRef}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
+                autoFocus={false}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -302,21 +313,21 @@ export default function Home() {
                 )}
               </button>
             </form>
-            
-            {/* Model Selection - Bottom Right */}
-            <div className="absolute -bottom-8 right-0">
+
+            {/* Model Selection - Smaller and Closer */}
+            <div className="absolute -bottom-5 right-0">
               <div className="relative">
-                <select 
+                <select
                   className="
                     appearance-none bg-transparent text-xs text-gray-400
-                    pr-4 cursor-pointer focus:outline-none
+                    pr-3 cursor-pointer focus:outline-none
                   "
                   defaultValue="pnr-g"
                 >
                   <option value="pnr-g">PNR-G</option>
                 </select>
                 <div className="absolute inset-y-0 right-0 flex items-center pointer-events-none">
-                  <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-2 h-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </div>
@@ -435,6 +446,7 @@ export default function Home() {
               ref={inputRef}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
+              autoFocus={false}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();

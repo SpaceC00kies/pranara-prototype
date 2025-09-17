@@ -1,0 +1,25 @@
+{
+  "name": "Pranara AI - Your Wellbeing Companion",
+  "short_name": "Pranara",
+  "description": "AI-powered wellbeing companion for mental health support and mindfulness",
+  "icons": [
+    {
+      "src": "/favicon/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/favicon/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "theme_color": "#64AF9A",
+  "background_color": "#E1EFEA",
+  "display": "standalone",
+  "start_url": "/",
+  "scope": "/",
+  "orientation": "portrait-primary"
+}

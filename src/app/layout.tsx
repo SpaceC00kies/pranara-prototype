@@ -34,14 +34,14 @@ const spaceMono = Space_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Jirung Senior Advisor - ผู้ช่วยดูแลผู้สูงอายุ",
-  description: "ผู้ช่วยอัจฉริยะสำหรับการดูแลผู้สูงอายุ ให้คำแนะนำที่ปลอดภัยและเข้าใจง่าย",
-  keywords: "ดูแลผู้สูงอายุ, คำแนะนำสุขภาพ, AI ผู้ช่วย, Jirung",
-  authors: [{ name: "Jirung" }],
+  title: "Pranara AI - Your Wellbeing Companion",
+  description: "AI-powered wellbeing companion providing personalized mental health support, mindfulness guidance, and therapeutic conversations in Thai and English",
+  keywords: "wellbeing, mental health, AI companion, mindfulness, therapy, stress relief, emotional support, Pranara",
+  authors: [{ name: "Pranara" }],
   robots: "index, follow",
   openGraph: {
-    title: "Jirung Senior Advisor - ผู้ช่วยดูแลผู้สูงอายุ",
-    description: "ผู้ช่วยอัจฉริยะสำหรับการดูแลผู้สูงอายุ ให้คำแนะนำที่ปลอดภัยและเข้าใจง่าย",
+    title: "Pranara AI - Your Wellbeing Companion",
+    description: "AI-powered wellbeing companion providing personalized mental health support, mindfulness guidance, and therapeutic conversations",
     type: "website",
     locale: "th_TH",
   },
@@ -62,13 +62,19 @@ export default function RootLayout({
   return (
     <html lang="th" dir="ltr">
       <head>
+        {/* Favicon and App Icons */}
+        <link rel="icon" href="/favicon/favicon.ico" sizes="32x32" />
+        <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/favicon/apple-touch-icon.png" />
+        <link rel="manifest" href="/favicon/site.webmanifest" />
+
         {/* Preconnect to Google Fonts for faster loading */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        
+
         {/* DNS prefetch for external services */}
         <link rel="dns-prefetch" href="https://generativelanguage.googleapis.com" />
-        
+
         {/* Optimize font loading with font-display: swap */}
         <style dangerouslySetInnerHTML={{
           __html: `
