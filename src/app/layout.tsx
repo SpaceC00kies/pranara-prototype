@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Prompt, Sarabun } from "next/font/google";
+import { Prompt, Sarabun, Space_Mono } from "next/font/google";
 import "./globals.css";
 import ErrorBoundary from "@/components/error/ErrorBoundary";
 import PerformanceTracker from "@/components/PerformanceTracker";
@@ -23,6 +23,14 @@ const sarabun = Sarabun({
   preload: true,
   fallback: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
   adjustFontFallback: true,
+});
+
+const spaceMono = Space_Mono({
+  variable: "--font-space-mono",
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  display: "swap",
+  preload: true,
 });
 
 export const metadata: Metadata = {
@@ -79,6 +87,10 @@ export default function RootLayout({
             
             .font-sarabun {
               font-family: var(--font-sarabun), 'Prompt-fallback', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            }
+            
+            .font-space-mono {
+              font-family: var(--font-space-mono), 'Courier New', monospace;
             }
             
             /* Mobile performance optimizations */
@@ -167,7 +179,7 @@ export default function RootLayout({
         }} />
       </head>
       <body
-        className={`${prompt.variable} ${sarabun.variable} font-prompt antialiased bg-white text-gray-900`}
+        className={`${prompt.variable} ${sarabun.variable} ${spaceMono.variable} font-prompt antialiased bg-white text-gray-900`}
       >
         <ErrorBoundary>
           {children}

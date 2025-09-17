@@ -79,6 +79,9 @@ const config: Config = {
         prompt: ['Prompt', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
         sarabun: ['Sarabun', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
         
+        // Add Google fonts
+        'space-mono': ['var(--font-space-mono)', 'monospace'],
+        
         // Add Fontshare fonts
         satoshi: ['Satoshi', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
         general: ['General Sans', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],

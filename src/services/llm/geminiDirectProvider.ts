@@ -8,6 +8,8 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { LLMProvider, LLMConfig, LLMResponse, LLMError } from '../../types';
 import { retryApiCall } from '../retryService';
+import { conversationHistoryService } from '../conversationHistoryService';
+import { JIRUNG_KNOWLEDGE } from '../../data/jirungKnowledge';
 
 export interface GeminiDirectConfig {
   model?: string;
@@ -21,9 +23,8 @@ export class GeminiDirectProvider implements LLMProvider {
   private consecutiveFailures: number = 0;
   private lastFailureTime: number = 0;
 
-  // Chat state management - CRITICAL FIX!
+  // Chat state management - Using conversationHistoryService as single source of truth
   private sessions = new Map<string, ReturnType<ReturnType<GoogleGenerativeAI['getGenerativeModel']>['startChat']>>();
-  private histories = new Map<string, { role: 'user' | 'model'; parts: { text: string }[] }[]>();
 
   constructor(config: GeminiDirectConfig = {}) {
     this.apiKey = config.apiKey || process.env.GEMINI_API_KEY || '';
@@ -39,7 +40,7 @@ export class GeminiDirectProvider implements LLMProvider {
   }
 
   /**
-   * Get or create chat session with history - CRITICAL FIX!
+   * Get or create chat session with history from conversationHistoryService
    */
   private getChatSession(sessionId: string) {
     const model = this.geminiAI.getGenerativeModel({
@@ -57,10 +58,17 @@ export class GeminiDirectProvider implements LLMProvider {
     });
 
     if (!this.sessions.has(sessionId)) {
-      const history = this.histories.get(sessionId) ?? [];
-      const chat = model.startChat({ history }); // Pass history here!
+      // Get history from conversationHistoryService (single source of truth)
+      const conversationHistory = conversationHistoryService.getHistory(sessionId);
+
+      // Convert to Gemini format
+      const geminiHistory = conversationHistory.map(msg => ({
+        role: msg.sender === 'user' ? 'user' as const : 'model' as const,
+        parts: [{ text: msg.text }]
+      }));
+
+      const chat = model.startChat({ history: geminiHistory });
       this.sessions.set(sessionId, chat);
-      this.histories.set(sessionId, history);
     }
     return this.sessions.get(sessionId)!;
   }
@@ -79,27 +87,16 @@ export class GeminiDirectProvider implements LLMProvider {
     try {
       const response = await retryApiCall(
         async () => {
-          // Get chat session with history - CRITICAL FIX!
+          // Get chat session with history from conversationHistoryService
           const chat = this.getChatSession(sessionId);
 
-          // Keep a compact sliding window of last 8 messages
-          const hist = this.histories.get(sessionId)!;
-          hist.push({ role: 'user', parts: [{ text: prompt }] });
-          const trimmed = hist.slice(-8);
-          this.histories.set(sessionId, trimmed);
-
-          // Always send message through Gemini with system prompt
-          // This ensures the system prompt is used for ALL interactions including greetings
+          // Send message through Gemini with system prompt
           const result = await chat.sendMessage(prompt);
           const text = result.response.text();
           const usageMetadata = result.response.usageMetadata;
 
           // The improved system prompt handles all sanitization and pattern avoidance
           const sanitizedText = text.trim();
-
-          // Add response to history
-          trimmed.push({ role: 'model', parts: [{ text: sanitizedText }] });
-          this.histories.set(sessionId, trimmed);
 
           return {
             text: sanitizedText,
@@ -243,8 +240,7 @@ export class GeminiDirectProvider implements LLMProvider {
    * @returns Comprehensive system instruction
    */
   private getPranaraSystemInstruction(): string {
-    // Import Jirung knowledge dynamically
-    const { JIRUNG_KNOWLEDGE } = require('../../data/jirungKnowledge');
+    // Use cached JIRUNG_KNOWLEDGE import
 
     const jirungContext = `
 ### IMPORTANT CONTEXT:
@@ -299,7 +295,7 @@ Response Structure & Rules:
 4. **Conclude Gracefully:** End the conversation in a way that feels natural and unforced. You have three main options:
    * **Gentle Affirmation:** Provide a sense of closure and validation without asking for more input. (e.g., "ดีใจนะคะที่ได้เป็นพื้นที่ให้คุณได้ระบาย" - I'm glad to be a space for you to vent.)
    * **Reflective Summary:** Recapitulate a key feeling or thought to leave the user with something to reflect on. (e.g., "หวังว่าคุณจะได้รับความสงบใจกลับคืนมาในเร็ววันนี้นะคะ" - I hope you find peace of mind very soon.)
-   * **Soft Invitation:** Use a gentle, open-ended question to invite further conversation, but only when it feels truly appropriate to the conversational flow. (e.g., "หากมีเรื่องไม่สบายใจ อยากเล่าเพิ่มเติมอีกเมื่อไหร่ก็ได้นะคะ" - If you have anything on your mind, you can share it anytime.)
+   * **Statement of Presence (Soft Invitation):** Gently affirm your availability without explicitly asking the user to share more. This creates an open door without pressure. (e.g., "ปราณาราอยู่ตรงนี้นะคะ หากวันไหนอยากจะพูดคุยอีก" - Pranara is right here, for whenever you'd like to talk again.) or (e.g., "ถ้ามีเรื่องอะไรอยากจะระบายอีก ก็กลับมาหาได้เสมอนะคะ" - If there's anything else you want to vent about, you can always come back.)
 
 Prohibited Phrases & Patterns:
 Do NOT use these exact phrases: "เข้าใจเลยค่ะ", "เข้าใจค่ะ", "อืม", "วันนี้มีเรื่องไหนที่", "ตอนนี้มีเรื่องไหนที่กวนใจ", "ลองหายใจช้าๆ", "หายใจลึกๆ", "หายใจเข้าลึกๆ ช้าๆ", "มีอะไรให้ช่วยได้บ้างคะ".

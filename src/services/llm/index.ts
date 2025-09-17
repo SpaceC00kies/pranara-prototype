@@ -14,7 +14,7 @@ export {
 } from './aiService';
 
 // Providers
-export { GeminiProvider, type GeminiConfig } from './geminiProvider';
+export { GeminiDirectProvider, type GeminiDirectConfig } from './geminiDirectProvider';
 
 // Prompt utilities
 export {

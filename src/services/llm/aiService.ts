@@ -145,16 +145,14 @@ export class AIService {
         {
           recentMessages: contextToUse.recentMessages,
           recentResponsePatterns: contextToUse.recentResponsePatterns,
-          conversationLength: contextToUse.conversationLength
+          conversationLength: contextToUse.conversationLength,
+          emotionalJourney: conversationHistoryService.getEmotionalJourneySummary(sessionId),
+          providedConcepts: conversationHistoryService.getProvidedConcepts(sessionId)
         }
       );
       const llmResponse = await this.generateWithRetry(prompt, sessionId);
-      const validatedResponse = await this.validateAndRegenerateIfRepetitive(
-        llmResponse.content,
-        sessionId,
-        prompt
-      );
-      const enhancedResponse = validatedResponse;
+      // Trust the system prompt to handle variation - no need for validation
+      const enhancedResponse = llmResponse.content;
       
       // Step 8: Determine LINE handoff recommendation
       const lineHandoffRecommendation = shouldRecommendLineHandoff(
@@ -175,7 +173,10 @@ export class AIService {
         mode
       );
 
-      // Step 11: Store conversation history (only if not provided externally)
+      // Step 11: Track concepts from response to prevent repetition
+      conversationHistoryService.trackConceptsFromResponse(sessionId, formattedResponse);
+
+      // Step 12: Store conversation history (only if not provided externally)
       if (!conversationContext) {
         // Add user message
         conversationHistoryService.addMessage(
@@ -250,29 +251,7 @@ export class AIService {
   // PRIVATE HELPER METHODS
   // ============================================================================
 
-  /**
-   * Simplified validation - let the improved system prompt handle repetition avoidance
-   */
-  private async validateAndRegenerateIfRepetitive(
-    response: string,
-    sessionId: string,
-    prompt: string,
-    attemptCount: number = 0
-  ): Promise<string> {
-    // The improved system prompt with explicit anti-repetition instructions
-    // should handle variation naturally. Only regenerate for truly identical responses.
-    const isIdentical = conversationHistoryService.isRepetitiveResponse(sessionId, response);
-    
-    if (isIdentical && attemptCount < 1) { // Reduced from 3 attempts to 1
-      console.log(`🔄 Response was identical, regenerating once`);
-      
-      // Simple regeneration with slightly higher temperature
-      const newResponse = await this.generateWithRetry(prompt, sessionId);
-      return newResponse.content;
-    }
-
-    return response;
-  }
+  // Removed validateAndRegenerateIfRepetitive - trusting system prompt to handle variation
 
   /**
    * Generates response with retry logic

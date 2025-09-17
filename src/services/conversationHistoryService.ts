@@ -6,13 +6,27 @@
 import { ChatMessage, TopicCategory } from '../types';
 
 export interface EmotionalContext {
-  currentMood: 'anxious' | 'sad' | 'worried' | 'calm' | 'seeking' | 'neutral';
+  currentMood: 'anxious' | 'sad' | 'worried' | 'calm' | 'seeking' | 'neutral' | 'frustrated' | 'reflective' | 'hopeful' | 'overwhelmed';
   intensityLevel: number; // 1-5
   topicProgression: string[]; // Track how topics evolve
   emotionalJourney: Array<{
     timestamp: Date;
     mood: string;
     trigger?: string;
+    intensity: number;
+  }>;
+  // Enhanced: Track emotional progression patterns
+  moodTransitions: Array<{
+    from: string;
+    to: string;
+    timestamp: Date;
+    context?: string;
+  }>;
+  // Track concepts and advice already provided
+  conceptsProvided: Array<{
+    concept: string;
+    timestamp: Date;
+    context: string;
   }>;
 }
 
@@ -22,6 +36,13 @@ export interface ConversationHistory {
   lastActivity: Date;
   messageCount: number;
   emotionalContext?: EmotionalContext;
+  // Enhanced: Track conversation themes and advice patterns
+  conversationThemes: string[];
+  adviceGiven: Array<{
+    category: string;
+    suggestion: string;
+    timestamp: Date;
+  }>;
 }
 
 export interface ResponsePattern {
@@ -306,16 +327,39 @@ class ConversationHistoryService {
     // Build topic progression
     const topicProgression = userMessages.map(msg => msg.text.substring(0, 50));
 
+    // Get existing context to track transitions
+    const existingContext = this.emotionalContexts.get(sessionId);
+    
     const emotionalContext: EmotionalContext = {
       currentMood,
       intensityLevel,
       topicProgression,
-      emotionalJourney: [{
-        timestamp: new Date(),
-        mood: currentMood,
-        trigger
-      }]
+      emotionalJourney: existingContext?.emotionalJourney || [],
+      moodTransitions: existingContext?.moodTransitions || [],
+      conceptsProvided: existingContext?.conceptsProvided || []
     };
+
+    // Add new emotional journey entry
+    emotionalContext.emotionalJourney.push({
+      timestamp: new Date(),
+      mood: currentMood,
+      trigger,
+      intensity: intensityLevel
+    });
+
+    // Track mood transitions
+    if (existingContext && existingContext.currentMood !== currentMood) {
+      emotionalContext.moodTransitions.push({
+        from: existingContext.currentMood,
+        to: currentMood,
+        timestamp: new Date(),
+        context: lastUserMessage.substring(0, 100)
+      });
+    }
+
+    // Keep only last 10 entries to prevent memory bloat
+    emotionalContext.emotionalJourney = emotionalContext.emotionalJourney.slice(-10);
+    emotionalContext.moodTransitions = emotionalContext.moodTransitions.slice(-5);
 
     // Store for future reference
     this.emotionalContexts.set(sessionId, emotionalContext);
@@ -354,6 +398,93 @@ class ConversationHistoryService {
   }
 
   /**
+   * Extract and track concepts from AI responses to prevent repetition
+   */
+  trackConceptsFromResponse(sessionId: string, response: string): void {
+    const concepts = this.extractConcepts(response);
+    const context = this.emotionalContexts.get(sessionId);
+    
+    if (context && concepts.length > 0) {
+      concepts.forEach(concept => {
+        context.conceptsProvided.push({
+          concept,
+          timestamp: new Date(),
+          context: response.substring(0, 100)
+        });
+      });
+      
+      // Keep only last 15 concepts to prevent memory bloat
+      context.conceptsProvided = context.conceptsProvided.slice(-15);
+      this.emotionalContexts.set(sessionId, context);
+    }
+  }
+
+  /**
+   * Extract key concepts/advice from AI response
+   */
+  private extractConcepts(response: string): string[] {
+    const concepts: string[] = [];
+    
+    // Thai advice patterns
+    const advicePatterns = [
+      /ลอง([^ค่ะนะ]{10,50})/g,  // "ลอง..." suggestions
+      /อยากให้([^ค่ะนะ]{10,50})/g,  // "อยากให้..." recommendations
+      /แนะนำให้([^ค่ะนะ]{10,50})/g,  // "แนะนำให้..." advice
+      /ควร([^ค่ะนะ]{10,50})/g,  // "ควร..." should do
+      /หาเวลา([^ค่ะนะ]{10,50})/g,  // "หาเวลา..." time management
+      /เขียน([^ค่ะนะ]{10,30})/g,  // "เขียน..." writing/journaling
+      /พูดคุย([^ค่ะนะ]{10,30})/g,  // "พูดคุย..." communication
+      /ตั้งเป้า([^ค่ะนะ]{10,30})/g,  // "ตั้งเป้า..." goal setting
+    ];
+
+    advicePatterns.forEach(pattern => {
+      const matches = response.match(pattern);
+      if (matches) {
+        matches.forEach(match => {
+          const concept = match.replace(/[ค่ะนะ\s]+$/, '').trim();
+          if (concept.length > 5) {
+            concepts.push(concept);
+          }
+        });
+      }
+    });
+
+    return concepts;
+  }
+
+  /**
+   * Get concepts already provided to avoid repetition
+   */
+  getProvidedConcepts(sessionId: string): string[] {
+    const context = this.emotionalContexts.get(sessionId);
+    return context?.conceptsProvided.map(c => c.concept) || [];
+  }
+
+  /**
+   * Get emotional journey summary for prompt context
+   */
+  getEmotionalJourneySummary(sessionId: string): string {
+    const context = this.emotionalContexts.get(sessionId);
+    if (!context || context.emotionalJourney.length < 2) {
+      return '';
+    }
+
+    const journey = context.emotionalJourney.slice(-4); // Last 4 emotional states
+    const moods = journey.map(j => j.mood);
+    
+    if (moods.length >= 2) {
+      const current = moods[moods.length - 1];
+      const previous = moods[moods.length - 2];
+      
+      if (current !== previous) {
+        return `User's emotional state has shifted from ${previous} to ${current}. `;
+      }
+    }
+    
+    return `User has been consistently ${moods[moods.length - 1]}. `;
+  }
+
+  /**
    * Get default emotional context
    */
   private getDefaultEmotionalContext(): EmotionalContext {
@@ -363,8 +494,11 @@ class ConversationHistoryService {
       topicProgression: [],
       emotionalJourney: [{
         timestamp: new Date(),
-        mood: 'neutral'
-      }]
+        mood: 'neutral',
+        intensity: 1
+      }],
+      moodTransitions: [],
+      conceptsProvided: []
     };
   }
 

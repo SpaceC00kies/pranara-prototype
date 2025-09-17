@@ -30,7 +30,7 @@ export default function Home() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!inputValue.trim() || isLoading) return;
 
     const userMessage = {
@@ -74,14 +74,14 @@ export default function Home() {
 
     } catch (error) {
       console.error('Error sending message:', error);
-      
+
       const errorMessage = {
         id: crypto.randomUUID(),
         text: 'ขออภัยค่ะ เกิดข้อผิดพลาดในการตอบกลับ กรุณาลองใหม่อีกครั้งค่ะ',
         sender: 'assistant' as const,
         timestamp: new Date(),
       };
-      
+
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
@@ -96,9 +96,13 @@ export default function Home() {
           Pranara
         </h1>
         <p className="font-sarabun text-xl text-text-secondary max-w-lg mx-auto leading-relaxed">
-          ลมหายใจแห่งปัญญา
+          เซฟโซนของคุณ
         </p>
-        <p className="font-mono text-sm text-gray-400 mt-2">
+        <p className="text-xs text-gray-400 mt-2" style={{ 
+          fontFamily: 'var(--font-space-mono), "Courier New", monospace',
+          letterSpacing: '-0.025em',
+          wordSpacing: '-0.1em'
+        }}>
           version : Pranara Genesis (PNR-G)
         </p>
       </div>
@@ -142,7 +146,7 @@ export default function Home() {
                 )}
               </div>
             ))}
-            
+
             {/* Typing Indicator - Seamless */}
             {isLoading && (
               <div className="flex justify-start mb-6">
@@ -152,13 +156,13 @@ export default function Home() {
                   </div>
                   <div className="flex items-center space-x-1">
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.15s'}}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.3s'}}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }}></div>
                   </div>
                 </div>
               </div>
             )}
-            
+
             <div ref={messagesEndRef} />
           </div>
         </div>
@@ -190,7 +194,7 @@ export default function Home() {
                 "
                 rows={1}
                 disabled={isLoading}
-                style={{ 
+                style={{
                   height: '48px',
                   lineHeight: '1.5'
                 }}
@@ -201,14 +205,14 @@ export default function Home() {
                 }}
               />
             </div>
-            
+
             {/* Send Button */}
             <button
               type="submit"
               disabled={!inputValue.trim() || isLoading}
               className={`
                 flex-shrink-0 h-full aspect-square min-h-[48px] min-w-[48px]
-                ${inputValue.trim() && !isLoading 
+                ${inputValue.trim() && !isLoading
                   ? 'bg-pranara-main hover:bg-pranara-dark text-slateGrey'
                   : 'bg-neutral-300 text-neutral-500'
                 }
@@ -223,12 +227,12 @@ export default function Home() {
               {isLoading ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
-                <svg 
-                  className="w-5 h-5 -rotate-90" 
-                  fill="currentColor" 
+                <svg
+                  className="w-5 h-5 -rotate-90"
+                  fill="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path 
+                  <path
                     d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"
                   />
                 </svg>
