@@ -51,7 +51,7 @@ function getAIService(): AIService {
 
 /**
  * POST /api/chat
- * Process user message and return AI response
+ * Process user message and return streaming AI response
  */
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -71,8 +71,15 @@ export async function POST(request: NextRequest) {
 
     const { message, sessionId, mode = 'conversation' } = body;
 
-    // Generate session ID if not provided or invalid
-    const validSessionId = isValidSessionId(sessionId) ? sessionId : generateSessionId();
+    // Simplified session validation - trust the client to send a valid UUID
+    if (!sessionId || !isValidSessionId(sessionId)) {
+      return NextResponse.json(
+        createErrorResponse('INVALID_INPUT', 'A valid session ID is required.'),
+        { status: 400 }
+      );
+    }
+
+    const validSessionId = sessionId;
 
     // Detect language
     const language = detectLanguage(message);
@@ -91,106 +98,39 @@ export async function POST(request: NextRequest) {
     // to avoid triggering greeting responses
     const enhancedMessage = message;
 
-    // Process message with AI service with fallback handling
-    let aiResponse;
-    let usedFallback = false;
-    
-    try {
-      const ai = getAIService();
-      // Use actual conversation length from history
-      const conversationLength = conversationContext.conversationLength;
-      
-      aiResponse = await retryApiCall(
-        () => ai.processMessage(enhancedMessage, validSessionId, language, conversationLength, mode, userProfile, conversationContext),
-        'ai-process-message',
-        {
-          maxAttempts: 2,
-          baseDelay: 1000,
-          retryCondition: (error: unknown) => {
-            // Only retry on specific errors
-            if (error && typeof error === 'object' && 'code' in error) {
-              const errorCode = (error as { code: string }).code;
-              return ['NETWORK_ERROR', 'RATE_LIMIT_EXCEEDED', 'GEMINI_UNAVAILABLE'].includes(errorCode);
-            }
-            return false;
+    // Create streaming response
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          const ai = getAIService();
+          
+          // Generate streaming response
+          for await (const chunk of ai.processMessageStream(enhancedMessage, validSessionId, language, mode)) {
+            const data = JSON.stringify({ chunk }) + '\n';
+            controller.enqueue(encoder.encode(data));
           }
+          
+          controller.close();
+        } catch (error) {
+          console.warn('AI service failed, using fallback response:', error);
+          
+          // Send fallback response
+          const fallbackResponse = 'ขออภัยค่ะ เกิดข้อผิดพลาดในการตอบกลับ กรุณาลองใหม่อีกครั้งค่ะ';
+          const data = JSON.stringify({ chunk: fallbackResponse }) + '\n';
+          controller.enqueue(encoder.encode(data));
+          controller.close();
         }
-      );
-    } catch (error) {
-      console.warn('AI service failed, using fallback response:', error);
-      usedFallback = true;
-      
-      // Classify topic for fallback
-      const topicCategory = classifyJirungTopic(message);
-      
-      // Check for emergency situations
-      if (shouldUseEmergencyFallback(message)) {
-        const emergencyResponse = getFallbackResponse('emergency', language);
-        aiResponse = {
-          response: emergencyResponse,
-          topic: 'emergency',
-          showLineOption: true
-        };
-      } else {
-        // Use contextual fallback
-        const fallbackResponse = fallbackService.getContextualFallback(
-          topicCategory as TopicCategory,
-          language,
-          conversationLength,
-          conversationContext.recentMessages.map(msg => msg.topic).filter(Boolean) as TopicCategory[]
-        );
-        
-        aiResponse = {
-          response: fallbackResponse,
-          topic: topicCategory as TopicCategory,
-          showLineOption: true
-        };
       }
-    }
-
-    // Create analytics event with enhanced topic classification and demographic context
-    const topicCategory = classifyJirungTopic(message);
-    const analyticsEvent = createAnalyticsEvent(
-      validSessionId,
-      scrubPII(message), // Use PII-scrubbed version for logging
-      topicCategory as TopicCategory,
-      language,
-      false, // lineClicked will be tracked separately
-      usedFallback ? 'fallback' : 'primary',
-      userProfile ? {
-        ageRange: userProfile.ageRange,
-        gender: userProfile.gender,
-        location: userProfile.location
-      } : undefined
-    );
-
-    // Log analytics (non-blocking)
-    logAnalytics(analyticsEvent).catch(error => {
-      console.error('Analytics logging failed:', error);
     });
 
-    // Add assistant response to conversation history
-    const assistantMessage = createChatMessage(
-      aiResponse.response, 
-      'assistant', 
-      aiResponse.topic as TopicCategory,
-      aiResponse.showLineOption
-    );
-    conversationHistoryService.addMessage(validSessionId, assistantMessage);
-
-    // Create response
-    const chatResponse: ChatResponse = {
-      response: aiResponse.response,
-      topic: aiResponse.topic as TopicCategory,
-      showLineOption: aiResponse.showLineOption,
-      sessionId: validSessionId,
-      mode: aiResponse.mode || mode
-    };
-
-    // Add performance headers
-    const responseTime = Date.now() - startTime;
-    const response = NextResponse.json(chatResponse);
-    response.headers.set('X-Response-Time', `${responseTime}ms`);
+    const response = new Response(stream, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Transfer-Encoding': 'chunked',
+      },
+    });
+    
     response.headers.set('X-AI-Provider', getAIService().getProviderName());
 
     return response;

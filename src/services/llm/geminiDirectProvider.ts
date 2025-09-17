@@ -60,7 +60,7 @@ export class GeminiDirectProvider implements LLMProvider {
     if (!this.sessions.has(sessionId)) {
       // Get conversation context from conversationHistoryService (single source of truth)
       const conversationContext = conversationHistoryService.getConversationContext(sessionId);
-      
+
       // Convert to Gemini format
       const geminiHistory = conversationContext.recentMessages.map(msg => ({
         role: msg.sender === 'user' ? 'user' as const : 'model' as const,
@@ -71,6 +71,66 @@ export class GeminiDirectProvider implements LLMProvider {
       this.sessions.set(sessionId, chat);
     }
     return this.sessions.get(sessionId)!;
+  }
+
+  /**
+   * Generates a streaming response using Gemini API directly
+   * @param prompt - The input prompt for the AI
+   * @param config - LLM configuration settings
+   * @returns AsyncGenerator<string> - Streaming response chunks
+   */
+  async* generateStreamingResponse(prompt: string, config?: LLMConfig & { sessionId?: string }): AsyncGenerator<string> {
+    const sessionId = config?.sessionId || 'default';
+
+    console.log(`🧠 Gemini Direct: Generating streaming response for session ${sessionId}`);
+
+    try {
+      // Option 1: Use chat session with history (better for conversation continuity)
+      if (sessionId && sessionId !== 'default') {
+        const chat = this.getChatSession(sessionId);
+        const result = await chat.sendMessageStream(prompt);
+        
+        for await (const chunk of result.stream) {
+          const chunkText = chunk.text();
+          if (chunkText) {
+            yield chunkText;
+          }
+        }
+      } else {
+        // Option 2: Use generateContentStream for stateless requests
+        const model = this.geminiAI.getGenerativeModel({
+          model: this.model,
+          generationConfig: {
+            temperature: 0.7,
+            topP: 0.8,
+            topK: 40,
+            maxOutputTokens: 4096,
+          },
+          systemInstruction: {
+            role: 'system',
+            parts: [{ text: this.getPranaraSystemInstruction() }]
+          }
+        });
+
+        const result = await model.generateContentStream(prompt);
+        
+        for await (const chunk of result.stream) {
+          const chunkText = chunk.text();
+          if (chunkText) {
+            yield chunkText;
+          }
+        }
+      }
+
+      // Reset failure count on success
+      this.consecutiveFailures = 0;
+
+    } catch (error) {
+      this.consecutiveFailures++;
+      this.lastFailureTime = Date.now();
+      console.error(`❌ Gemini Direct: Streaming generation failed:`, error);
+      throw this.handleGeminiError(error);
+    }
   }
 
   /**

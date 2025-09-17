@@ -216,6 +216,105 @@ export class AIService {
   }
 
   /**
+   * Processes a chat message and generates a streaming AI response
+   * @param message - User's message
+   * @param sessionId - Session identifier
+   * @param language - Language preference (th/en)
+   * @param mode - App mode (conversation or intelligence)
+   * @returns AsyncGenerator<string> - Streaming response chunks
+   */
+  async* processMessageStream(
+    message: string,
+    sessionId: string,
+    language: 'th' | 'en' = 'th',
+    mode: AppMode = 'conversation'
+  ): AsyncGenerator<string> {
+    try {
+      // Step 1: Validate and sanitize input
+      const validatedMessage = validateUserInput(message);
+      const processingResult = processTextForAnalytics(validatedMessage);
+      
+      if (!validatedMessage) {
+        yield 'ขออภัยค่ะ ไม่สามารถตอบคำถามนี้ได้ กรุณาลองถามในรูปแบบอื่นค่ะ';
+        return;
+      }
+
+      // Step 2: Safety check
+      if (!processingResult.safetyResult.isSafe) {
+        yield 'ขออภัยค่ะ ไม่สามารถตอบคำถามนี้ได้ กรุณาลองถามในรูปแบบอื่นค่ะ';
+        return;
+      }
+
+      // Step 3: Classify topic and build prompt
+      const topic = classifyTopic(validatedMessage);
+      const contextToUse = conversationHistoryService.getConversationContext(sessionId);
+      
+      const prompt = buildUserPrompt(
+        validatedMessage, 
+        topic, 
+        language, 
+        undefined, 
+        mode,
+        {
+          recentMessages: contextToUse.recentMessages,
+          recentResponsePatterns: contextToUse.recentResponsePatterns,
+          conversationLength: contextToUse.conversationLength,
+          emotionalJourney: conversationHistoryService.getEmotionalJourneySummary(sessionId),
+          providedConcepts: conversationHistoryService.getProvidedConcepts(sessionId)
+        }
+      );
+
+      // Step 4: Generate streaming response
+      const provider = this.config.llmProvider as any; // Type assertion for streaming method
+      if (provider.generateStreamingResponse) {
+        let fullResponse = '';
+        
+        for await (const chunk of provider.generateStreamingResponse(prompt, { sessionId })) {
+          fullResponse += chunk;
+          
+          // Break large chunks into smaller pieces for smoother streaming
+          if (chunk.length > 8) {
+            // Split chunk into smaller pieces for natural typing effect
+            const pieces = this.splitIntoSmoothChunks(chunk);
+            for (const piece of pieces) {
+              yield piece;
+              // Add small delay between pieces for natural typing effect
+              await this.delay(25 + Math.random() * 15); // 25-40ms delay
+            }
+          } else {
+            yield chunk;
+            // Small delay for short chunks too
+            await this.delay(15 + Math.random() * 10); // 15-25ms delay
+          }
+        }
+
+        // Step 5: Track concepts and store conversation after streaming completes
+        const formattedResponse = this.formatResponse(fullResponse, topic, language, false, mode);
+        conversationHistoryService.trackConceptsFromResponse(sessionId, formattedResponse);
+        
+        // Store conversation history
+        conversationHistoryService.addMessage(
+          sessionId,
+          createChatMessage(validatedMessage, 'user', topic)
+        );
+        
+        conversationHistoryService.addMessage(
+          sessionId,
+          createChatMessage(formattedResponse, 'assistant', topic)
+        );
+      } else {
+        // Fallback to non-streaming
+        const response = await this.processMessage(message, sessionId, language, undefined, mode);
+        yield response.response;
+      }
+
+    } catch (error) {
+      console.error('Streaming error:', error);
+      yield 'ขออภัยค่ะ เกิดข้อผิดพลาดในการตอบกลับ กรุณาลองใหม่อีกครั้งค่ะ';
+    }
+  }
+
+  /**
    * Validates the LLM provider connection
    * @returns Promise<boolean> - True if connection is valid
    */
@@ -265,7 +364,7 @@ export class AIService {
       try {
         return await this.config.llmProvider.generateResponse(
           prompt, 
-          { ...this.config.defaultLLMConfig, sessionId }
+          this.config.defaultLLMConfig
         );
       } catch (error) {
         lastError = error as LLMError;
@@ -411,6 +510,26 @@ export class AIService {
    */
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Splits a large chunk into smaller pieces for smoother streaming
+   * @param chunk - The text chunk to split
+   * @returns Array of smaller text pieces
+   */
+  private splitIntoSmoothChunks(chunk: string): string[] {
+    const pieces: string[] = [];
+    let currentPos = 0;
+    
+    while (currentPos < chunk.length) {
+      // Random chunk size between 3-8 characters for natural variation
+      const chunkSize = Math.floor(Math.random() * 6) + 3;
+      const piece = chunk.substring(currentPos, currentPos + chunkSize);
+      pieces.push(piece);
+      currentPos += chunkSize;
+    }
+    
+    return pieces;
   }
 }
 

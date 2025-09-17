@@ -11,7 +11,7 @@ export default function Home() {
   }>>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [sessionId] = useState(() => crypto.randomUUID());
+  const [sessionId, setSessionId] = useState<string | null>(null); // Initialize as null
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -19,6 +19,25 @@ export default function Home() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
+
+  // Correct way to set session ID only once on the client
+  useEffect(() => {
+    let sid = localStorage.getItem('pranara-session-id');
+
+    // Validate existing session ID format - if it's not 64-char hex, regenerate
+    const isValidFormat = sid && sid.length === 64 && /^[a-f0-9]+$/i.test(sid);
+
+    if (!sid || !isValidFormat) {
+      // Generate a proper hex session ID that matches server validation
+      const randomBytes = new Uint8Array(32);
+      crypto.getRandomValues(randomBytes);
+      sid = Array.from(randomBytes, byte => byte.toString(16).padStart(2, '0')).join('');
+      localStorage.setItem('pranara-session-id', sid);
+    }
+
+    setSessionId(sid);
+    console.log('🔑 Pranara session ID established:', sid);
+  }, []); // Empty dependency array means this runs only once on mount
 
   // Focus input on mount
   useEffect(() => {
@@ -31,7 +50,8 @@ export default function Home() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!inputValue.trim() || isLoading) return;
+    // Ensure sessionId is not null before sending
+    if (!inputValue.trim() || isLoading || !sessionId) return;
 
     const userMessage = {
       id: crypto.randomUUID(),
@@ -61,16 +81,58 @@ export default function Home() {
         throw new Error(`HTTP ${response.status}`);
       }
 
-      const data = await response.json();
-
+      // Create assistant message placeholder
+      const assistantMessageId = crypto.randomUUID();
       const assistantMessage = {
-        id: crypto.randomUUID(),
-        text: data.response,
+        id: assistantMessageId,
+        text: '',
         sender: 'assistant' as const,
         timestamp: new Date(),
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+
+      // Read streaming response
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (reader) {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n').filter(line => line.trim());
+
+            for (const line of lines) {
+              try {
+                const data = JSON.parse(line);
+                if (data.chunk) {
+                  console.log('📥 Received chunk:', data.chunk.substring(0, 30) + '...');
+                  
+                  // Turn off loading as soon as we get the first chunk
+                  if (isLoading) {
+                    setIsLoading(false);
+                  }
+                  
+                  // Update the assistant message with new chunk
+                  setMessages(prev => prev.map(msg =>
+                    msg.id === assistantMessageId
+                      ? { ...msg, text: msg.text + data.chunk }
+                      : msg
+                  ));
+                }
+              } catch (e) {
+                // Skip invalid JSON lines
+                console.log('❌ Failed to parse line:', line);
+              }
+            }
+          }
+        } finally {
+          reader.releaseLock();
+        }
+      }
 
     } catch (error) {
       console.error('Error sending message:', error);
@@ -97,13 +159,6 @@ export default function Home() {
         </h1>
         <p className="font-sarabun text-xl text-text-secondary max-w-lg mx-auto leading-relaxed">
           เซฟโซนของคุณ
-        </p>
-        <p className="text-xs text-gray-400 mt-2" style={{ 
-          fontFamily: 'var(--font-space-mono), "Courier New", monospace',
-          letterSpacing: '-0.025em',
-          wordSpacing: '-0.1em'
-        }}>
-          version : Pranara Genesis (PNR-G)
         </p>
       </div>
 
@@ -209,10 +264,10 @@ export default function Home() {
             {/* Send Button */}
             <button
               type="submit"
-              disabled={!inputValue.trim() || isLoading}
+              disabled={!inputValue.trim() || isLoading || !sessionId}
               className={`
                 flex-shrink-0 h-full aspect-square min-h-[48px] min-w-[48px]
-                ${inputValue.trim() && !isLoading
+                ${inputValue.trim() && !isLoading && sessionId
                   ? 'bg-pranara-main hover:bg-pranara-dark text-slateGrey'
                   : 'bg-neutral-300 text-neutral-500'
                 }
@@ -239,6 +294,18 @@ export default function Home() {
               )}
             </button>
           </form>
+
+          {/* Subtle version footer */}
+          <div className="text-center mt-3">
+            <p className="text-xs text-gray-300" style={{
+              fontFamily: 'var(--font-space-mono), "Courier New", monospace',
+              letterSpacing: '-0.025em',
+              wordSpacing: '-0.1em',
+              fontSize: '10px'
+            }}>
+              version : Pranara Genesis (PNR-G)
+            </p>
+          </div>
         </div>
       </div>
     </div>
