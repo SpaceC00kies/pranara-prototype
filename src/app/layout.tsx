@@ -62,6 +62,11 @@ export default function RootLayout({
   return (
     <html lang="th" dir="ltr">
       <head>
+        {/* Safari Mobile Meta Tags - Fix green background bleeding */}
+        <meta name="theme-color" content="#ffffff" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        
         {/* Favicon and App Icons */}
         <link rel="icon" href="/favicon/favicon.ico" sizes="32x32" />
         <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml" />
@@ -165,6 +170,26 @@ export default function RootLayout({
                 transition-duration: 0.01ms !important;
                 scroll-behavior: auto !important;
               }
+            }
+            
+            /* iOS Safe Area Support - Prevent background bleeding */
+            @supports (padding: max(0px)) {
+              .safe-area-top {
+                padding-top: max(env(safe-area-inset-top), 0px);
+              }
+              
+              .safe-area-bottom {
+                padding-bottom: max(env(safe-area-inset-bottom), 0px);
+              }
+            }
+            
+            /* Prevent background color bleeding on iOS Safari */
+            html {
+              background-color: #ffffff;
+            }
+            
+            body {
+              background-color: #ffffff;
             }
             
             /* High contrast mode support */

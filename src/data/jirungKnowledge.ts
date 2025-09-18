@@ -127,13 +127,7 @@ export const JIRUNG_KNOWLEDGE: JirungInfo = {
   }
 };
 
-/** Utility: simple PII scrubber for logs (hide long numbers/emails/URLs) */
-export function scrubPII(text: string): string {
-  return text
-    .replace(/\b\d{6,}\b/g, "●●●")                 // long numbers
-    .replace(/\S+@\S+\.\S+/g, "[email]")           // emails
-    .replace(/https?:\/\/\S+/g, "[url]");          // urls
-}
+// PII scrubbing removed - keeping system simple
 
 /** Classify a user question into a coarse topic for stats */
 export type TopicKey =

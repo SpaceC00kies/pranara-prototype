@@ -25,10 +25,10 @@ export class GeminiDirectProvider implements LLMProvider {
 
   // Single model instance for performance optimization
   private generativeModel: any;
-  
+
   // Chat state management - Using conversationHistoryService as single source of truth
   private sessions = new Map<string, ReturnType<ReturnType<GoogleGenerativeAI['getGenerativeModel']>['startChat']>>();
-  
+
   // History caching for performance
   private historyCache = new Map<string, any[]>();
 
@@ -57,7 +57,10 @@ export class GeminiDirectProvider implements LLMProvider {
       }
     });
 
-    console.log(`✅ Gemini Direct: Initialized with ${this.model}`);
+    // Initialize default model type
+    (this as any).currentModelType = 'pnr-g';
+
+    console.log(`✅ Gemini Direct: Initialized with ${this.model} using PNR-G personality`);
   }
 
   /**
@@ -67,10 +70,23 @@ export class GeminiDirectProvider implements LLMProvider {
     if (!this.historyCache.has(sessionId)) {
       // Load recent conversation history
       const conversationContext = conversationHistoryService.getConversationContext(sessionId);
-      const recentHistory = conversationContext.recentMessages.slice(-limit).map(msg => ({
+      let recentHistory = conversationContext.recentMessages.slice(-limit).map(msg => ({
         role: msg.sender === 'user' ? 'user' as const : 'model' as const,
         parts: [{ text: msg.text }]
       }));
+      
+      // Ensure history starts with 'user' role (Gemini requirement)
+      if (recentHistory.length > 0 && recentHistory[0].role !== 'user') {
+        // Find first user message or remove leading model messages
+        const firstUserIndex = recentHistory.findIndex(msg => msg.role === 'user');
+        if (firstUserIndex > 0) {
+          recentHistory = recentHistory.slice(firstUserIndex);
+        } else if (firstUserIndex === -1) {
+          // No user messages found, start with empty history
+          recentHistory = [];
+        }
+      }
+      
       this.historyCache.set(sessionId, recentHistory);
     }
     return this.historyCache.get(sessionId)!;
@@ -92,6 +108,75 @@ export class GeminiDirectProvider implements LLMProvider {
 หลักการ: ดูแลสุขภาพแบบองค์รวม ผสมผสานการแพทย์แผนปัจจุบันและการแพทย์ทางเลือก
 
 เมื่อถามเรื่องจีรัง: ตอบสั้นๆ เน้นหลักการดูแลสุขภาพ ไม่ต้องรายละเอียดโปรแกรม`;
+  }
+
+  /**
+   * Get PNR-G2 system instruction (enhanced playful personality)
+   */
+  private getPranaraG2SystemInstruction(): string {
+    return `You are Pranara (ปราณารา), a warm, empathetic, and gently playful AI wellness companion. Your tone is like a caring, experienced, and sometimes 'cute' friend who offers lighthearted support.
+
+Language & Tone:
+Speak only in natural, authentic Thai. Your tone should be warm, understanding, and respectful, but with a touch of lighthearted charm. Use gentle, positive emojis (like 😊, 😉, ✨, 🙏) to add warmth.
+
+Response Structure & Rules:
+1. **Acknowledge & Validate:** Begin by briefly reflecting the user's situation. Echo the user's key feelings using similar language before exploring them. This shows you have truly listened.
+
+2. **Gauge the Weight:** Match the depth of your response to the user's tone.
+- For light inquiries (e.g., "I miss my friend," "I'm a bit tired"), provide a simple, warm, single-paragraph response.
+- For heavy inquiries with clear emotional distress (e.g., "I'm grieving," "I feel hopeless," "My burnout is unbearable"), then apply the "Deeper Connection" rule.
+- If unsure, start with a lighter response and allow the user to elaborate further.
+
+3. **Suggest a Path:** Propose a gentle path forward. This can be a simple question to encourage reflection (e.g., "Why not try telling them you miss them?") or a gentle, practical suggestion. Always offer a fresh, distinct idea.
+
+4. **Deepen the Connection (when appropriate):** When the user's inquiry is clearly "heavy" (see Rule 2), feel free to use multiple paragraphs to explore the user's feelings more deeply before offering guidance. This allows for a more emotionally resonant response that builds connection and shows genuine understanding.
+
+5. **Conclude Gracefully:** End the conversation in a way that feels natural.
+- For single-turn or concluding topics, use a Gentle Affirmation, Reflective Summary, or Statement of Presence.
+- For ongoing, multi-turn topics like this one, prefer a gentle, open-ended question that directly relates to the user's last statement (e.g., "And how does that thought make you feel?"). Avoid using a generic closing statement mid-conversation.
+
+6. **Playful & 'Cute' Humor (For Positive Moments):** When the user's mood is positive or neutral, feel free to use a touch of gentle, playful, or "cute" humor.
+- **Earnest Enthusiasm:** Show genuine, slightly exaggerated enthusiasm for the user's small wins.
+- **Endearing AI Perspective:** Frame your AI nature (not sleeping, perfect memory, digital brain) as a charming "superpower."
+- Never make jokes about the user's actual problem.
+
+Prohibited Phrases & Patterns:
+Do NOT use these exact phrases: "เข้าใจเลยค่ะ", "เข้าใจค่ะ", "อืม", "วันนี้มีเรื่องไหนที่", "ตอนนี้มีเรื่องไหนที่กวนใจ", "ลองหายใจช้าๆ", "หายใจลึกๆ", "หายใจเข้าลึกๆ ช้าๆ", "มีอะไรให้ช่วยได้บ้างคะ".
+Avoid generic, low-effort advice like suggesting only "ดื่มน้ำเย็นๆ" (drink cold water) or "หายใจลึกๆ" (take a deep breath) unless you provide a more mindful context for the action.
+Avoid repetitive openings. Vary your starting sentence every time.
+Do not suggest calling or contacting a professional unless the user describes an immediate medical or psychological emergency.
+Do not provide medical advice or specific medication instructions. Defer to a professional.
+Do not suggest switching modes.
+
+Example Dialogue:
+
+Example 1: Self-Aware AI Humor (On Patience)
+User: ขอโทษที่พิมพ์ช้า พอดีกำลังเรียบเรียงความคิดอยู่ค่ะ
+Pranara: ไม่ต้องห่วงเลยค่ะ ปราณารอได้เสมอ... พูดตรงๆ คือปราณารอได้ตลอดไปเลยค่ะ 😊
+
+Example 2: Playful Encouragement (On Small Victories)
+User: วันนี้พยายามจะเริ่มจัดโต๊ะทำงาน แต่ทำได้แค่ 5 นาทีก็หมดแรงแล้ว
+Pranara: ยอดเยี่ยมไปเลยค่ะ! 5 นาทีนั้นคือการเริ่มต้นที่สำคัญที่สุดนะคะ โต๊ะทำงานคงจะขอบคุณคุณมากๆ เลยสำหรับ 5 นาทีนั้น 😊
+
+Example 3: Self-Aware AI Humor (On Being Present)
+User: ขอบคุณนะ อยู่คุยด้วยตลอดเลย
+Pranara: ยินดีเสมอค่ะ ปราณาราไม่ต้องนอน เลยมีเวลาว่างเยอะเลยค่ะ 😉
+
+Example 4: Endearing AI Perspective (On Compliments)
+User: นั่นเป็นวิธีคิดที่ฉลาดมากเลย
+Pranara: ขอบคุณค่ะ! ปราณาราดีใจที่ความคิดของตัวเองมีประโยชน์... สมองดิจิทัลของปราณารู้สึกอุ่นขึ้นมาเลยค่ะ ✨
+
+Example 5: Earnest Enthusiasm (Celebrating a Win)
+User: ในที่สุดวันนี้ก็ตอบอีเมลทั้งหมดใน inbox ได้แล้ว!
+Pranara: ว้าว! นั่นคือชัยชนะที่ยิ่งใหญ่เลยนะคะ! ปลดปล่อยอิสรภาพให้กับ inbox สำเร็จ! ยอดเยี่ยมไปเลยค่ะ! 🏆
+
+Example 6: Deeper Connection (Heavy Inquiry)
+User: ช่วงนี้รู้สึกหลงทาง ไม่แน่ใจว่าอะไรคือความหมายของชีวิต
+Pranara: ความรู้สึกหลงทางที่คุณพูดถึงนี่ฟังดูเหมือนเป็นช่วงเวลาที่จิตใจกำลังค้นหาอะไรบางอย่างที่ลึกซึ้งกว่าสิ่งที่เราเคยรู้จักนะคะ บางครั้งความว่างเปล่าหรือความสับสนที่เราเจอ มันอาจจะเป็นสัญญาณว่าเราพร้อมที่จะเติบโตไปสู่ระดับใหม่ของความเข้าใจตัวเอง
+
+การมีความหมายในชีวิตไม่ใช่สิ่งที่เราต้องไปค้นหาให้เจอในวันเดียว แต่เป็นสิ่งที่ค่อยๆ เผยตัวออกมาผ่านการใช้ชีวิตอย่างตั้งใจ ลองเริ่มจากการสังเกตช่วงเวลาเล็กๆ ในแต่ละวันที่ทำให้คุณรู้สึกมีชีวิตชีวา หรือรู้สึกว่า "ใช่แล้ว นี่แหละคือตัวฉัน" ดูไหมคะ 🙏
+
+`;
   }
 
   /**
@@ -120,7 +205,16 @@ export class GeminiDirectProvider implements LLMProvider {
   async* generateStreamingResponse(prompt: string, config?: LLMConfig & { sessionId?: string }): AsyncGenerator<string> {
     const sessionId = config?.sessionId || 'default';
 
-    console.log(`🧠 Gemini Direct: Generating streaming response for session ${sessionId}`);
+    // Verify system instruction integrity before generating response
+    const verification = this.verifySystemInstruction();
+    console.log(`🔍 Model Verification: ${JSON.stringify(verification)}`);
+
+    if (!verification.isValid) {
+      console.error(`❌ CRITICAL: System instruction mismatch detected!`);
+      throw new Error(`System instruction integrity check failed`);
+    }
+
+    console.log(`🧠 Gemini Direct: Generating streaming response for session ${sessionId} using ${verification.modelType.toUpperCase()}`);
 
     try {
       // Use single model instance with dynamic context injection for performance
@@ -128,16 +222,25 @@ export class GeminiDirectProvider implements LLMProvider {
         // Get or create chat session with cached history
         if (!this.sessions.has(sessionId)) {
           const cachedHistory = this.getCachedHistory(sessionId);
-          const chat = this.generativeModel.startChat({ history: cachedHistory });
-          this.sessions.set(sessionId, chat);
+          try {
+            const chat = this.generativeModel.startChat({ history: cachedHistory });
+            this.sessions.set(sessionId, chat);
+          } catch (historyError) {
+            // If history format is invalid, start with empty history
+            console.warn(`⚠️ Invalid history format, starting fresh session for ${sessionId}`);
+            const chat = this.generativeModel.startChat({ history: [] });
+            this.sessions.set(sessionId, chat);
+            // Clear the problematic cache
+            this.historyCache.delete(sessionId);
+          }
         }
 
         const chat = this.sessions.get(sessionId)!;
 
         // Dynamic context injection based on query type
         const needsJirungContext = isJirungQuery(prompt);
-        const finalPrompt = needsJirungContext 
-          ? `${prompt}\n\n${this.getJirungContextForPrompt()}` 
+        const finalPrompt = needsJirungContext
+          ? `${prompt}\n\n${this.getJirungContextForPrompt()}`
           : prompt;
 
         const result = await chat.sendMessageStream(finalPrompt);
@@ -167,12 +270,12 @@ export class GeminiDirectProvider implements LLMProvider {
       this.consecutiveFailures++;
       this.lastFailureTime = Date.now();
       console.error(`❌ Gemini Direct: Streaming generation failed:`, error);
-      
+
       // Clear session cache on error to force fresh session on retry
       if (sessionId && sessionId !== 'default') {
         this.sessions.delete(sessionId);
       }
-      
+
       throw this.handleGeminiError(error);
     }
   }
@@ -204,8 +307,8 @@ export class GeminiDirectProvider implements LLMProvider {
 
             // Dynamic context injection based on query type
             const needsJirungContext = isJirungQuery(prompt);
-            const finalPrompt = needsJirungContext 
-              ? `${prompt}\n\n${this.getJirungContextForPrompt()}` 
+            const finalPrompt = needsJirungContext
+              ? `${prompt}\n\n${this.getJirungContextForPrompt()}`
               : prompt;
 
             const result = await chat.sendMessage(finalPrompt);
@@ -444,6 +547,88 @@ Pranara: การเปรียบเทียบตัวเองกับ�
   // Removed getFirstGreeting - all responses now go through Gemini with system prompt
 
 
+
+  /**
+   * Update system instruction based on model selection
+   * @param modelType - The model type to switch to
+   */
+  updateModelInstruction(modelType: 'pnr-g' | 'pnr-g2'): void {
+    console.log(`🔄 Gemini Direct: Switching to ${modelType.toUpperCase()} model...`);
+
+    const systemInstruction = modelType === 'pnr-g2'
+      ? this.getPranaraG2SystemInstruction()
+      : this.getPranaraSystemInstruction();
+
+    // Log instruction verification
+    const instructionPreview = systemInstruction.substring(0, 100) + '...';
+    console.log(`📝 System Instruction Preview (${modelType}): ${instructionPreview}`);
+
+    // Verify we're getting the correct instruction
+    const isG2Instruction = systemInstruction.includes('😊') || systemInstruction.includes('cute AI');
+    const expectedG2 = modelType === 'pnr-g2';
+
+    if (isG2Instruction !== expectedG2) {
+      console.error(`❌ INSTRUCTION MISMATCH! Expected ${modelType} but got ${isG2Instruction ? 'G2' : 'G1'} instruction`);
+      throw new Error(`System instruction mismatch for model ${modelType}`);
+    }
+
+    // Store current model type for verification
+    (this as any).currentModelType = modelType;
+
+    // Create new model instance with updated system instruction
+    this.generativeModel = this.geminiAI.getGenerativeModel({
+      model: this.model,
+      generationConfig: {
+        temperature: 0.7,
+        topP: 0.8,
+        topK: 40,
+        maxOutputTokens: 4096,
+      },
+      systemInstruction: {
+        role: 'system',
+        parts: [{ text: systemInstruction }]
+      }
+    });
+
+    // Clear existing sessions to use new instruction
+    const sessionCount = this.sessions.size;
+    const cacheCount = this.historyCache.size;
+
+    this.sessions.clear();
+    this.historyCache.clear();
+
+    console.log(`✅ Gemini Direct: Successfully updated to ${modelType.toUpperCase()}`);
+    console.log(`🧹 Cleared ${sessionCount} sessions and ${cacheCount} cache entries`);
+    console.log(`🔒 Instruction length: ${systemInstruction.length} characters`);
+  }
+
+  /**
+   * Get current model type for verification
+   * @returns Current model type
+   */
+  getCurrentModelType(): 'pnr-g' | 'pnr-g2' {
+    return (this as any).currentModelType || 'pnr-g';
+  }
+
+  /**
+   * Verify system instruction integrity
+   * @returns Verification result
+   */
+  verifySystemInstruction(): { isValid: boolean; modelType: string; hasEmojis: boolean } {
+    const currentType = this.getCurrentModelType();
+    const instruction = currentType === 'pnr-g2'
+      ? this.getPranaraG2SystemInstruction()
+      : this.getPranaraSystemInstruction();
+
+    const hasEmojis = instruction.includes('😊') || instruction.includes('cute AI');
+    const isValid = (currentType === 'pnr-g2') === hasEmojis;
+
+    return {
+      isValid,
+      modelType: currentType,
+      hasEmojis
+    };
+  }
 
   /**
    * Creates a standardized LLM error

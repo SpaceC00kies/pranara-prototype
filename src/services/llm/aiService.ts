@@ -2,7 +2,7 @@
  * AI Service for Jirung Senior Advisor
  * 
  * This service orchestrates AI interactions, combining LLM providers,
- * content safety, PII scrubbing, and response processing.
+ * content safety, and response processing.
  */
 
 import { 
@@ -36,6 +36,9 @@ import {
   shouldRecommendLineHandoff
 } from '../lineService';
 import { getUserProfile } from '../userProfileService';
+import { TextProcessingResult } from '@/utils';
+// validateTextForAIProcessing removed - keeping system simple
+import { TextProcessingResult } from '@/utils';
 
 // ============================================================================
 // AI SERVICE CONFIGURATION
@@ -47,7 +50,7 @@ export interface AIServiceConfig {
   maxRetries: number;
   retryDelayMs: number;
   enableSafetyChecks: boolean;
-  enablePIIScrubbing: boolean;
+  // PII scrubbing removed - keeping system simple
 }
 
 export interface AIServiceResponse {
@@ -104,18 +107,7 @@ export class AIService {
         throw this.createError('INVALID_INPUT', 'Invalid or empty message');
       }
 
-      // Step 2: Simple validation - no heavy processing
-      const validation = validateTextForAIProcessing(validatedMessage);
-      
-      if (!validation.shouldProcess) {
-        const safetyResult: SafetyCheckResult = {
-          isSafe: validation.isValid,
-          flaggedCategories: validation.emergencyDetected ? ['emergency'] : [],
-          recommendLineHandoff: validation.recommendLineHandoff,
-          emergencyDetected: validation.emergencyDetected
-        };
-        return this.handleUnsafeContent(safetyResult, processingResult, language);
-      }
+      // Step 2: Simple validation - keeping it simple
 
       // Step 3: Simple topic classification
       const topic = this.getSimpleTopic(validatedMessage);
@@ -218,7 +210,8 @@ export class AIService {
     message: string,
     sessionId: string,
     language: 'th' | 'en' = 'th',
-    mode: AppMode = 'conversation'
+    mode: AppMode = 'conversation',
+    model?: 'pnr-g' | 'pnr-g2'
   ): AsyncGenerator<string> {
     try {
       // Step 1: Simple validation - no heavy processing
@@ -232,6 +225,25 @@ export class AIService {
       if (validatedMessage.length > 2000) {
         yield 'ขออภัยค่ะ ข้อความยาวเกินไป กรุณาพิมพ์สั้นลงค่ะ';
         return;
+      }
+
+      // Update model instruction if needed
+      if (model && this.config.llmProvider && 'updateModelInstruction' in this.config.llmProvider) {
+        console.log(`🎯 AIService: Requesting model switch to ${model.toUpperCase()}`);
+        
+        // Check current model type before update
+        const currentType = 'getCurrentModelType' in this.config.llmProvider 
+          ? (this.config.llmProvider as any).getCurrentModelType()
+          : 'unknown';
+        
+        if (currentType !== model) {
+          console.log(`🔄 AIService: Switching from ${currentType.toUpperCase()} to ${model.toUpperCase()}`);
+          (this.config.llmProvider as any).updateModelInstruction(model);
+        } else {
+          console.log(`✅ AIService: Already using ${model.toUpperCase()}, no switch needed`);
+        }
+      } else if (model) {
+        console.log(`⚠️ AIService: Model parameter ${model} provided but provider doesn't support updateModelInstruction`);
       }
 
       // Step 2: Simple topic classification
@@ -581,7 +593,7 @@ export function createDefaultAIConfig(llmProvider: LLMProvider): AIServiceConfig
     maxRetries: 3,
     retryDelayMs: 1000,
     enableSafetyChecks: true,
-    enablePIIScrubbing: true,
+    // PII scrubbing removed
   };
 }
 

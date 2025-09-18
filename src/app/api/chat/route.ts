@@ -21,20 +21,19 @@ import {
   isValidSessionId,
   detectLanguage
 } from '../../../services/sessionService';
-import { 
-  classifyTopic as classifyJirungTopic,
-  scrubPII 
+import {
+  classifyTopic as classifyJirungTopic
 } from '../../../data/jirungKnowledge';
-import { 
-  getFallbackResponse, 
+import {
+  getFallbackResponse,
   shouldUseEmergencyFallback,
-  FallbackService 
+  FallbackService
 } from '../../../services/fallbackService';
 import { retryApiCall } from '../../../services/retryService';
 import { getUserProfile } from '../../../services/userProfileService';
-import { 
-  conversationHistoryService, 
-  createChatMessage 
+import {
+  conversationHistoryService,
+  createChatMessage
 } from '../../../services/conversationHistoryService';
 
 // Initialize AI service and fallback service
@@ -69,7 +68,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { message, sessionId, mode = 'conversation' } = body;
+    const { message, sessionId, mode = 'conversation', model } = body;
 
     // Simplified session validation - trust the client to send a valid UUID
     if (!sessionId || !isValidSessionId(sessionId)) {
@@ -104,17 +103,17 @@ export async function POST(request: NextRequest) {
       async start(controller) {
         try {
           const ai = getAIService();
-          
+
           // Generate streaming response
-          for await (const chunk of ai.processMessageStream(enhancedMessage, validSessionId, language, mode)) {
+          for await (const chunk of ai.processMessageStream(enhancedMessage, validSessionId, language, mode, model)) {
             const data = JSON.stringify({ chunk }) + '\n';
             controller.enqueue(encoder.encode(data));
           }
-          
+
           controller.close();
         } catch (error) {
           console.warn('AI service failed, using fallback response:', error);
-          
+
           // Send fallback response
           const fallbackResponse = 'ขออภัยค่ะ เกิดข้อผิดพลาดในการตอบกลับ กรุณาลองใหม่อีกครั้งค่ะ';
           const data = JSON.stringify({ chunk: fallbackResponse }) + '\n';
@@ -130,7 +129,7 @@ export async function POST(request: NextRequest) {
         'Transfer-Encoding': 'chunked',
       },
     });
-    
+
     response.headers.set('X-AI-Provider', getAIService().getProviderName());
 
     return response;

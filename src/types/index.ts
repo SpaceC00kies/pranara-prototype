@@ -20,6 +20,7 @@ export interface ChatRequest {
   message: string;
   sessionId: string;
   mode?: AppMode;
+  model?: 'pnr-g' | 'pnr-g2';
 }
 
 export interface ChatResponse {
@@ -186,32 +187,7 @@ export interface UsageStats {
 }
 
 // ============================================================================
-// PII SCRUBBING INTERFACES
-// ============================================================================
-
-export interface PIIPatterns {
-  email: RegExp;
-  phone: RegExp;
-  url: RegExp;
-  thaiId: RegExp;
-  thaiPhone: RegExp;
-  lineId: RegExp;
-}
-
-export interface PIIReplacementTokens {
-  email: string;
-  phone: string;
-  thaiPhone: string;
-  url: string;
-  thaiId: string;
-  lineId: string;
-}
-
-export interface PIIScrubbingResult {
-  scrubbedText: string;
-  foundPII: string[];
-  isClean: boolean;
-}
+// PII scrubbing removed - keeping system simple
 
 // ============================================================================
 // SAFETY CONFIGURATION INTERFACES

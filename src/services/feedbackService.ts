@@ -10,17 +10,17 @@ import {
   PromptVersionAnalytics 
 } from '../types';
 import { getDatabase } from './databaseService';
-// PII scrubbing removed - keeping feedback simple
+// Keeping feedback simple
 import { createSessionHash } from './sessionService';
 import { supabaseAdminTyped } from '../lib/supabase';
 
 export class FeedbackService {
   /**
-   * Submit user feedback with PII scrubbing and session hashing
+   * Submit user feedback with session hashing
    */
   static async submitFeedback(feedback: FeedbackData): Promise<void> {
     try {
-      // Simple feedback storage - no PII scrubbing needed for basic feedback
+      // Simple feedback storage
 
       // Get current prompt version
       const promptVersion = await this.getCurrentPromptVersion();

@@ -1,6 +1,6 @@
 /**
  * Analytics Service
- * Handles PII-safe data collection, topic classification, and conversation flow tracking
+ * Handles data collection, topic classification, and conversation flow tracking
  */
 
 import {
@@ -14,7 +14,7 @@ import {
   Gender,
   Location
 } from '../types';
-// PII scrubbing removed - keeping analytics simple
+// Keeping analytics simple
 import { createSessionHash } from './sessionService';
 
 // Topic classification keywords
@@ -134,7 +134,7 @@ export function classifyTopic(message: string): TopicClassificationResult {
 }
 
 /**
- * Create analytics event with PII scrubbing and demographic context
+ * Create analytics event with demographic context
  */
 export function createAnalyticsEvent(
   sessionId: string,
@@ -145,7 +145,7 @@ export function createAnalyticsEvent(
   routed: 'primary' | 'fallback' = 'primary',
   userProfile?: { ageRange?: string; gender?: string; location?: string }
 ): AnalyticsEvent {
-  // Simple text truncation - no PII scrubbing needed for basic analytics
+  // Simple text truncation for basic analytics
   const textSnippet = message.substring(0, 160);
 
   return {

@@ -26,6 +26,9 @@ export default function Home() {
   const [feedbackMessageText, setFeedbackMessageText] = useState<string>('');
   const [feedbackMode, setFeedbackMode] = useState<'detailed' | 'positive' | 'quick'>('detailed');
 
+  // Model selection state
+  const [selectedModel, setSelectedModel] = useState<'pnr-g' | 'pnr-g2'>('pnr-g');
+
 
 
   // Auto-scroll to bottom when new messages arrive
@@ -97,13 +100,16 @@ export default function Home() {
     setIsStreaming(true); // Also turn ON streaming state
 
     try {
+      console.log(`🎯 Frontend: Sending message with model ${selectedModel.toUpperCase()}`);
+      
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userMessage.text,
           sessionId,
-          mode: 'intelligence'
+          mode: 'intelligence',
+          model: selectedModel
         }),
       });
 
@@ -356,15 +362,21 @@ export default function Home() {
 
             {/* Model Selection - Smaller and Closer */}
             <div className="absolute -bottom-5 right-0">
-              <div className="relative">
+              <div className="relative flex items-center gap-1">
+                {/* Active Model Indicator */}
+                <div className={`w-2 h-2 rounded-full ${selectedModel === 'pnr-g2' ? 'bg-pink-400' : 'bg-blue-400'}`} 
+                     title={`Active: ${selectedModel.toUpperCase()}`}></div>
+                
                 <select
                   className="
                     appearance-none bg-transparent text-xs text-gray-400
                     pr-3 cursor-pointer focus:outline-none
                   "
-                  defaultValue="pnr-g"
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value as 'pnr-g' | 'pnr-g2')}
                 >
-                  <option value="pnr-g">PNR-G</option>
+                  <option value="pnr-g">PNR-G (Professional)</option>
+                  <option value="pnr-g2">PNR-G2 (Playful) 😊</option>
                 </select>
                 <div className="absolute inset-y-0 right-0 flex items-center pointer-events-none">
                   <svg className="w-2 h-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

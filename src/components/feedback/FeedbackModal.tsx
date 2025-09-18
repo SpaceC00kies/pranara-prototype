@@ -233,34 +233,34 @@ export default function FeedbackModal({
                 {/* Response Length */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2 font-sarabun">
-                    How was the response length?
+                    ความยาวของคำตอบเป็นอย่างไร?
                   </label>
                   <select
                     value={responseLength}
                     onChange={(e) => setResponseLength(e.target.value as any)}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 font-sarabun focus:outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
                   >
-                    <option value="">Select length</option>
-                    <option value="too-short">Too short</option>
-                    <option value="just-right">Just right</option>
-                    <option value="too-long">Too long</option>
+                    <option value="">เลือกความยาว</option>
+                    <option value="too-short">สั้นเกินไป</option>
+                    <option value="just-right">เหมาะสมดี</option>
+                    <option value="too-long">ยาวเกินไป</option>
                   </select>
                 </div>
 
                 {/* Cultural Sensitivity */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2 font-sarabun">
-                    How was the cultural sensitivity?
+                    ความเหมาะสมทางวัฒนธรรมเป็นอย่างไร?
                   </label>
                   <select
                     value={culturalSensitivity}
                     onChange={(e) => setCulturalSensitivity(e.target.value as any)}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 font-sarabun focus:outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
                   >
-                    <option value="">Select sensitivity</option>
-                    <option value="appropriate">Appropriate and sensitive</option>
-                    <option value="inappropriate">Inappropriate or insensitive</option>
-                    <option value="unsure">Not sure</option>
+                    <option value="">เลือกความเหมาะสม</option>
+                    <option value="appropriate">เหมาะสมและละเอียดอ่อน</option>
+                    <option value="inappropriate">ไม่เหมาะสมหรือไม่ละเอียดอ่อน</option>
+                    <option value="unsure">ไม่แน่ใจ</option>
                   </select>
                 </div>
               </>
@@ -270,13 +270,13 @@ export default function FeedbackModal({
             {mode === 'detailed' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2 font-sarabun">
-                  Specific text (optional)
+                  ข้อความเฉพาะ (ไม่บังคับ)
                 </label>
                 <input
                   type="text"
                   value={selectedText}
                   onChange={(e) => setSelectedText(e.target.value)}
-                  placeholder="Highlight specific part of the response"
+                  placeholder="เลือกส่วนเฉพาะของคำตอบ"
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 font-sarabun focus:outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
                 />
               </div>
@@ -285,18 +285,18 @@ export default function FeedbackModal({
             {/* Comment */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2 font-sarabun">
-                {mode === 'positive' ? 'Additional comments (optional)' :
-                  mode === 'negative' ? 'What specifically was wrong?' : 'Your feedback'}
+                {mode === 'positive' ? 'ความคิดเห็นเพิ่มเติม (ไม่บังคับ)' :
+                  mode === 'negative' ? 'มีอะไรผิดพลาดเป็นพิเศษ?' : 'ความคิดเห็นของคุณ'}
               </label>
               <textarea
                 value={userComment}
                 onChange={(e) => setUserComment(e.target.value)}
                 placeholder={
                   mode === 'positive'
-                    ? "Any additional thoughts on what made this response great?"
+                    ? "มีความคิดเห็นเพิ่มเติมเกี่ยวกับสิ่งที่ทำให้คำตอบนี้ดีไหม?"
                     : mode === 'negative'
-                      ? "What specifically made this response unhelpful or problematic?"
-                      : "Please share your thoughts on how Pranara can improve..."
+                      ? "อะไรทำให้คำตอบนี้ไม่มีประโยชน์หรือมีปัญหาเป็นพิเศษ?"
+                      : "กรุณาแบ่งปันความคิดเห็นว่าปราณารา สามารถปรับปรุงอย่างไร..."
                 }
                 rows={3}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 font-sarabun focus:outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500 resize-none"
