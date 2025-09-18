@@ -117,14 +117,8 @@ export default function FeedbackModal({
   };
 
   return (
-    <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-      onClick={onClose}
-    >
-      <div 
-        className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-xl">
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
@@ -152,15 +146,15 @@ export default function FeedbackModal({
                 </label>
                 <div className="space-y-2">
                   {positiveAspectOptions.map(aspect => (
-                    <div key={aspect} className="flex items-center">
+                    <div key={aspect} className="flex items-center space-x-2">
                       <input
                         type="checkbox"
                         id={`positive-${aspect}`}
                         checked={positiveAspects.includes(aspect)}
                         onChange={() => handlePositiveAspectToggle(aspect)}
-                        className="rounded border-gray-300 text-green-600 focus:ring-green-200 focus:ring-2"
+                        className="h-4 w-4 rounded border-gray-300 focus:outline-none"
                       />
-                      <label htmlFor={`positive-${aspect}`} className="ml-2 text-sm text-gray-700 font-sarabun cursor-pointer">
+                      <label htmlFor={`positive-${aspect}`} className="text-sm text-gray-700 font-sarabun cursor-pointer select-none">
                         {positiveAspectLabels[aspect]}
                       </label>
                     </div>
@@ -177,15 +171,15 @@ export default function FeedbackModal({
                 </label>
                 <div className="space-y-2">
                   {negativeAspectOptions.map(aspect => (
-                    <div key={aspect} className="flex items-center">
+                    <div key={aspect} className="flex items-center space-x-2">
                       <input
                         type="checkbox"
                         id={`negative-${aspect}`}
                         checked={negativeAspects.includes(aspect)}
                         onChange={() => handleNegativeAspectToggle(aspect)}
-                        className="rounded border-gray-300 text-red-600 focus:ring-red-200 focus:ring-2"
+                        className="h-4 w-4 rounded border-gray-300 focus:outline-none"
                       />
-                      <label htmlFor={`negative-${aspect}`} className="ml-2 text-sm text-gray-700 font-sarabun cursor-pointer">
+                      <label htmlFor={`negative-${aspect}`} className="text-sm text-gray-700 font-sarabun cursor-pointer select-none">
                         {negativeAspectLabels[aspect]}
                       </label>
                     </div>
