@@ -494,4 +494,29 @@ export class FeedbackService {
       throw new Error('Failed to update feedback');
     }
   }
+
+  /**
+   * Delete feedback (admin only)
+   */
+  static async deleteFeedback(feedbackId: number): Promise<void> {
+    try {
+      const db = await getDatabase();
+      
+      // Use Supabase directly for deletion
+      const { error } = await supabaseAdminTyped
+        .from('user_feedback')
+        .delete()
+        .eq('id', feedbackId);
+
+      if (error) {
+        console.error('❌ Error deleting feedback:', error);
+        throw new Error(`Failed to delete feedback: ${error.message}`);
+      }
+
+      console.log('✅ Feedback deleted successfully:', feedbackId);
+    } catch (error) {
+      console.error('❌ Error deleting feedback:', error);
+      throw new Error('Failed to delete feedback');
+    }
+  }
 }

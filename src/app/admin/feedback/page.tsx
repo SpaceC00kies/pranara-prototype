@@ -132,6 +132,31 @@ export default function FeedbackAdminPage() {
     }
   };
 
+  const deleteFeedback = async (feedbackId: number) => {
+    if (!confirm('Are you sure you want to delete this feedback? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/feedback?id=${feedbackId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${password}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        // Refresh the feedback list
+        fetchFeedback(currentPage);
+      } else {
+        throw new Error('Failed to delete feedback');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete feedback');
+    }
+  };
+
   const exportFeedback = async () => {
     try {
       const response = await fetch('/api/feedback?type=export', {
@@ -315,6 +340,13 @@ export default function FeedbackAdminPage() {
                       className="text-blue-600 hover:text-blue-800 text-sm"
                     >
                       {item.isReviewed ? 'View' : 'Review'}
+                    </button>
+                    <button
+                      onClick={() => deleteFeedback(item.id)}
+                      className="text-red-600 hover:text-red-800 text-sm"
+                      title="Delete feedback"
+                    >
+                      Delete
                     </button>
                   </div>
                 </div>

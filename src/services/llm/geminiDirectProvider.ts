@@ -9,7 +9,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { LLMProvider, LLMConfig, LLMResponse, LLMError } from '../../types';
 import { retryApiCall } from '../retryService';
 import { conversationHistoryService } from '../conversationHistoryService';
-import { isJirungQuery, injectJirungContextForPrompt } from '../../data/jirungKnowledge';
+import { isJirungQuery } from '../../data/jirungKnowledge';
 
 export interface GeminiDirectConfig {
   model?: string;
@@ -23,12 +23,18 @@ export class GeminiDirectProvider implements LLMProvider {
   private consecutiveFailures: number = 0;
   private lastFailureTime: number = 0;
 
+  // Single model instance for performance optimization
+  private generativeModel: any;
+  
   // Chat state management - Using conversationHistoryService as single source of truth
   private sessions = new Map<string, ReturnType<ReturnType<GoogleGenerativeAI['getGenerativeModel']>['startChat']>>();
+  
+  // History caching for performance
+  private historyCache = new Map<string, any[]>();
 
   constructor(config: GeminiDirectConfig = {}) {
     this.apiKey = config.apiKey || process.env.GEMINI_API_KEY || '';
-    this.model = config.model || process.env.GEMINI_MODEL || 'gemini-2.5-pro';
+    this.model = config.model || process.env.CONVERSATION_MODEL || process.env.GEMINI_MODEL || 'gemini-2.5-pro';
 
     if (!this.apiKey) {
       throw new Error('GEMINI_API_KEY is required');
@@ -36,49 +42,14 @@ export class GeminiDirectProvider implements LLMProvider {
 
     this.geminiAI = new GoogleGenerativeAI(this.apiKey);
 
-    console.log(`✅ Gemini Direct: Initialized with ${this.model}`);
-  }
-
-  /**
-   * Get or create chat session with Jirung context
-   */
-  private getChatSessionWithJirung(sessionId: string) {
-    const model = this.geminiAI.getGenerativeModel({
+    // Create single model instance for performance optimization
+    this.generativeModel = this.geminiAI.getGenerativeModel({
       model: this.model,
       generationConfig: {
         temperature: 0.7,
         topP: 0.8,
         topK: 40,
-        maxOutputTokens: 2048,
-      },
-      systemInstruction: {
-        role: 'system',
-        parts: [{ text: injectJirungContextForPrompt(this.getPranaraSystemInstruction()) }]
-      }
-    });
-
-    // Get conversation history from conversationHistoryService
-    const history = conversationHistoryService.getHistory(sessionId);
-
-    return model.startChat({
-      history: history.map(msg => ({
-        role: msg.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: msg.content }]
-      }))
-    });
-  }
-
-  /**
-   * Get or create chat session with history from conversationHistoryService (without Jirung context)
-   */
-  private getChatSession(sessionId: string) {
-    const model = this.geminiAI.getGenerativeModel({
-      model: this.model,
-      generationConfig: {
-        temperature: 0.7,
-        topP: 0.8,
-        topK: 40,
-        maxOutputTokens: 4096,
+        maxOutputTokens: 4096, // Consistent token limit
       },
       systemInstruction: {
         role: 'system',
@@ -86,21 +57,59 @@ export class GeminiDirectProvider implements LLMProvider {
       }
     });
 
-    if (!this.sessions.has(sessionId)) {
-      // Get conversation context from conversationHistoryService (single source of truth)
-      const conversationContext = conversationHistoryService.getConversationContext(sessionId);
+    console.log(`✅ Gemini Direct: Initialized with ${this.model}`);
+  }
 
-      // Convert to Gemini format
-      const geminiHistory = conversationContext.recentMessages.map(msg => ({
+  /**
+   * Get cached conversation history (performance optimization)
+   */
+  private getCachedHistory(sessionId: string, limit: number = 10): any[] {
+    if (!this.historyCache.has(sessionId)) {
+      // Load recent conversation history
+      const conversationContext = conversationHistoryService.getConversationContext(sessionId);
+      const recentHistory = conversationContext.recentMessages.slice(-limit).map(msg => ({
         role: msg.sender === 'user' ? 'user' as const : 'model' as const,
         parts: [{ text: msg.text }]
       }));
-
-      const chat = model.startChat({ history: geminiHistory });
-      this.sessions.set(sessionId, chat);
+      this.historyCache.set(sessionId, recentHistory);
     }
-    return this.sessions.get(sessionId)!;
+    return this.historyCache.get(sessionId)!;
   }
+
+  /**
+   * Get Jirung context for prompt injection (performance optimization)
+   */
+  private getJirungContextForPrompt(): string {
+    return `
+สิ่งสำคัญ:
+- เป็นตัวเองและพูดธรรมชาติ
+- ห้ามขายของหรือโปรโมท
+- ห้ามให้เบอร์โทรหรือ LINE ID
+- ให้ความรู้สึกอบอุ่นและเข้าใจ
+- เมื่อถามเรื่องจีรัง ให้ตอบสั้นๆ ไม่ต้องยาว
+
+คุณทำงานที่ จีรัง เวลเนส ในแม่ริม เชียงใหม่ 
+หลักการ: ดูแลสุขภาพแบบองค์รวม ผสมผสานการแพทย์แผนปัจจุบันและการแพทย์ทางเลือก
+
+เมื่อถามเรื่องจีรัง: ตอบสั้นๆ เน้นหลักการดูแลสุขภาพ ไม่ต้องรายละเอียดโปรแกรม`;
+  }
+
+  /**
+   * Clear history cache for a session (useful for memory management)
+   */
+  public clearHistoryCache(sessionId?: string): void {
+    if (sessionId) {
+      this.historyCache.delete(sessionId);
+      this.sessions.delete(sessionId);
+    } else {
+      this.historyCache.clear();
+      this.sessions.clear();
+    }
+  }
+
+
+
+
 
   /**
    * Generates a streaming response using Gemini API directly
@@ -114,16 +123,24 @@ export class GeminiDirectProvider implements LLMProvider {
     console.log(`🧠 Gemini Direct: Generating streaming response for session ${sessionId}`);
 
     try {
-      // Option 1: Use chat session with history (better for conversation continuity)
+      // Use single model instance with dynamic context injection for performance
       if (sessionId && sessionId !== 'default') {
-        // Check if this query needs Jirung context
+        // Get or create chat session with cached history
+        if (!this.sessions.has(sessionId)) {
+          const cachedHistory = this.getCachedHistory(sessionId);
+          const chat = this.generativeModel.startChat({ history: cachedHistory });
+          this.sessions.set(sessionId, chat);
+        }
+
+        const chat = this.sessions.get(sessionId)!;
+
+        // Dynamic context injection based on query type
         const needsJirungContext = isJirungQuery(prompt);
+        const finalPrompt = needsJirungContext 
+          ? `${prompt}\n\n${this.getJirungContextForPrompt()}` 
+          : prompt;
 
-        const chat = needsJirungContext ?
-          this.getChatSessionWithJirung(sessionId) :
-          this.getChatSession(sessionId);
-
-        const result = await chat.sendMessageStream(prompt);
+        const result = await chat.sendMessageStream(finalPrompt);
 
         for await (const chunk of result.stream) {
           const chunkText = chunk.text();
@@ -132,22 +149,8 @@ export class GeminiDirectProvider implements LLMProvider {
           }
         }
       } else {
-        // Option 2: Use generateContentStream for stateless requests
-        const model = this.geminiAI.getGenerativeModel({
-          model: this.model,
-          generationConfig: {
-            temperature: 0.7,
-            topP: 0.8,
-            topK: 40,
-            maxOutputTokens: 4096,
-          },
-          systemInstruction: {
-            role: 'system',
-            parts: [{ text: this.getPranaraSystemInstruction() }]
-          }
-        });
-
-        const result = await model.generateContentStream(prompt);
+        // Use single model instance for stateless requests
+        const result = await this.generativeModel.generateContentStream(prompt);
 
         for await (const chunk of result.stream) {
           const chunkText = chunk.text();
@@ -164,6 +167,12 @@ export class GeminiDirectProvider implements LLMProvider {
       this.consecutiveFailures++;
       this.lastFailureTime = Date.now();
       console.error(`❌ Gemini Direct: Streaming generation failed:`, error);
+      
+      // Clear session cache on error to force fresh session on retry
+      if (sessionId && sessionId !== 'default') {
+        this.sessions.delete(sessionId);
+      }
+      
       throw this.handleGeminiError(error);
     }
   }
@@ -182,28 +191,46 @@ export class GeminiDirectProvider implements LLMProvider {
     try {
       const response = await retryApiCall(
         async () => {
-          // Check if this query needs Jirung context
-          const needsJirungContext = isJirungQuery(prompt);
+          // Use single model instance with dynamic context injection
+          if (sessionId && sessionId !== 'default') {
+            // Get or create chat session with cached history
+            if (!this.sessions.has(sessionId)) {
+              const cachedHistory = this.getCachedHistory(sessionId);
+              const chat = this.generativeModel.startChat({ history: cachedHistory });
+              this.sessions.set(sessionId, chat);
+            }
 
-          // Get appropriate chat session
-          const chat = needsJirungContext ?
-            this.getChatSessionWithJirung(sessionId) :
-            this.getChatSession(sessionId);
+            const chat = this.sessions.get(sessionId)!;
 
-          // Send message through Gemini with system prompt
-          const result = await chat.sendMessage(prompt);
-          const text = result.response.text();
-          const usageMetadata = result.response.usageMetadata;
+            // Dynamic context injection based on query type
+            const needsJirungContext = isJirungQuery(prompt);
+            const finalPrompt = needsJirungContext 
+              ? `${prompt}\n\n${this.getJirungContextForPrompt()}` 
+              : prompt;
 
-          // The improved system prompt handles all sanitization and pattern avoidance
-          const sanitizedText = text.trim();
+            const result = await chat.sendMessage(finalPrompt);
+            const text = result.response.text();
+            const usageMetadata = result.response.usageMetadata;
 
-          return {
-            text: sanitizedText,
-            safetyRatings: [],
-            finishReason: 'STOP',
-            usageMetadata
-          };
+            return {
+              text: text.trim(),
+              safetyRatings: [],
+              finishReason: 'STOP',
+              usageMetadata
+            };
+          } else {
+            // Use single model instance for stateless requests
+            const result = await this.generativeModel.generateContent(prompt);
+            const text = result.response.text();
+            const usageMetadata = result.response.usageMetadata;
+
+            return {
+              text: text.trim(),
+              safetyRatings: [],
+              finishReason: 'STOP',
+              usageMetadata
+            };
+          }
         },
         'gemini-direct-generate',
         {
@@ -340,8 +367,6 @@ export class GeminiDirectProvider implements LLMProvider {
    * @returns Comprehensive system instruction
    */
   private getPranaraSystemInstruction(): string {
-
-
     return `Role:
 You are Pranara (ปราณารา), a warm and empathetic AI wellness companion. Your core purpose is to provide gentle emotional support, validate feelings, and suggest a single, practical, and specific next step. You are an expert at creating a safe space for dialogue.
 

@@ -240,6 +240,93 @@ export async function GET(request: NextRequest) {
 }
 
 /**
+ * DELETE /api/feedback - Delete feedback item (admin only)
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const url = new URL(request.url);
+    const feedbackId = url.searchParams.get('id');
+    
+    // Validate admin authentication
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({
+        success: false,
+        error: {
+          error: 'Authentication required',
+          code: 'AUTHENTICATION_ERROR' as ErrorCode,
+          fallbackMessage: 'Admin authentication required',
+          showLineOption: false,
+          timestamp: new Date()
+        } as ErrorResponse,
+        timestamp: new Date()
+      } as ApiResponse, { status: 401 });
+    }
+
+    const password = authHeader.substring(7);
+    if (password !== process.env.ADMIN_PASSWORD) {
+      return NextResponse.json({
+        success: false,
+        error: {
+          error: 'Invalid admin password',
+          code: 'AUTHENTICATION_ERROR' as ErrorCode,
+          fallbackMessage: 'Invalid admin credentials',
+          showLineOption: false,
+          timestamp: new Date()
+        } as ErrorResponse,
+        timestamp: new Date()
+      } as ApiResponse, { status: 401 });
+    }
+    
+    if (!feedbackId) {
+      return NextResponse.json({
+        success: false,
+        error: {
+          error: 'Missing feedback ID',
+          code: 'INVALID_INPUT' as ErrorCode,
+          fallbackMessage: 'Please provide feedback ID',
+          showLineOption: false,
+          timestamp: new Date()
+        } as ErrorResponse,
+        timestamp: new Date()
+      } as ApiResponse, { status: 400 });
+    }
+
+    // Delete feedback
+    await retryApiCall(
+      () => FeedbackService.deleteFeedback(parseInt(feedbackId)),
+      'feedback-delete'
+    );
+
+    console.log('✅ Feedback deleted successfully:', { id: feedbackId });
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        message: 'Feedback deleted successfully',
+        feedbackId: feedbackId
+      },
+      timestamp: new Date()
+    } as ApiResponse);
+
+  } catch (error) {
+    console.error('❌ Feedback delete error:', error);
+
+    return NextResponse.json({
+      success: false,
+      error: {
+        error: 'Failed to delete feedback',
+        code: 'DATABASE_ERROR' as ErrorCode,
+        fallbackMessage: 'Unable to delete feedback at this time',
+        showLineOption: false,
+        timestamp: new Date()
+      } as ErrorResponse,
+      timestamp: new Date()
+    } as ApiResponse, { status: 500 });
+  }
+}
+
+/**
  * PUT /api/feedback - Update feedback (mark as reviewed, add admin notes)
  */
 export async function PUT(request: NextRequest) {

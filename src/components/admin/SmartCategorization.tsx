@@ -46,10 +46,30 @@ export default function SmartCategorization({ onClose }: SmartCategorizationProp
   const fetchFeedback = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/feedback');
+      // Get admin password from URL params or prompt user
+      const urlParams = new URLSearchParams(window.location.search);
+      const adminPassword = urlParams.get('password') || prompt('Enter admin password:');
+      
+      if (!adminPassword) {
+        setError('Admin password required');
+        return;
+      }
+
+      const response = await fetch('/api/feedback?type=list&limit=100', {
+        headers: {
+          'Authorization': `Bearer ${adminPassword}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.status === 401) {
+        setError('Invalid admin password');
+        return;
+      }
+      
       if (response.ok) {
         const result = await response.json();
-        setFeedback(result.data || []);
+        setFeedback(result.data?.feedback || []);
       } else {
         setError('Failed to fetch feedback');
       }

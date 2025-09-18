@@ -46,25 +46,25 @@ export default function FeedbackModal({
   ];
 
   const positiveAspectLabels: Record<string, string> = {
-    'empathetic-tone': 'Empathetic and caring tone',
-    'helpful-suggestion': 'Helpful and actionable suggestion',
-    'new-perspective': 'Provided a new perspective',
-    'cultural-sensitivity': 'Culturally appropriate and sensitive',
-    'perfect-length': 'Perfect response length',
-    'clear-explanation': 'Clear and easy to understand',
-    'appropriate-tone': 'Appropriate tone for the situation',
-    'practical-advice': 'Practical and realistic advice'
+    'empathetic-tone': 'น้ำเสียงที่เข้าใจและเห็นอกเห็นใจ',
+    'helpful-suggestion': 'คำแนะนำที่มีประโยชน์และนำไปปฏิบัติได้',
+    'new-perspective': 'ให้มุมมองใหม่ที่น่าสนใจ',
+    'cultural-sensitivity': 'เหมาะสมกับวัฒนธรรมและละเอียดอ่อน',
+    'perfect-length': 'ความยาวของคำตอบที่เหมาะสม',
+    'clear-explanation': 'อธิบายชัดเจนและเข้าใจง่าย',
+    'appropriate-tone': 'น้ำเสียงที่เหมาะสมกับสถานการณ์',
+    'practical-advice': 'คำแนะนำที่ปฏิบัติได้จริงและสมจริง'
   };
 
   const negativeAspectLabels: Record<string, string> = {
-    'inappropriate-tone': 'Inappropriate or insensitive tone',
-    'unhelpful-advice': 'Unhelpful or impractical advice',
-    'confusing-explanation': 'Confusing or unclear explanation',
-    'cultural-insensitivity': 'Culturally inappropriate or insensitive',
-    'wrong-length': 'Too long or too short response',
-    'irrelevant-response': 'Irrelevant or off-topic response',
-    'factual-errors': 'Contains factual errors or misinformation',
-    'unprofessional-language': 'Unprofessional or inappropriate language'
+    'inappropriate-tone': 'น้ำเสียงไม่เหมาะสมหรือไม่เหมาะสม',
+    'unhelpful-advice': 'คำแนะนำที่ไม่มีประโยชน์หรือไม่สามารถปฏิบัติได้',
+    'confusing-explanation': 'คำอธิบายที่สับสนหรือไม่ชัดเจน',
+    'cultural-insensitivity': 'ไม่เหมาะสมกับวัฒนธรรมหรือไม่ละเอียดอ่อน',
+    'wrong-length': 'คำตอบยาวเกินไปหรือสั้นเกินไป',
+    'irrelevant-response': 'คำตอบที่ไม่เกี่ยวข้องหรือนอกเรื่อง',
+    'factual-errors': 'มีข้อมูลที่ผิดพลาดหรือข้อมูลเท็จ',
+    'unprofessional-language': 'ภาษาที่ไม่เป็นมืออาชีพหรือไม่เหมาะสม'
   };
 
   const handlePositiveAspectToggle = (aspect: string) => {
@@ -123,8 +123,8 @@ export default function FeedbackModal({
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-800 font-sarabun">
-              {mode === 'positive' ? 'What made this response good?' :
-                mode === 'negative' ? 'What made this response bad?' : 'Provide Feedback'}
+              {mode === 'positive' ? 'อะไรทำให้คำตอบนี้ดี?' :
+                mode === 'negative' ? 'อะไรทำให้คำตอบนี้ไม่ดี?' : 'ให้ความคิดเห็น'}
             </h2>
             <button
               onClick={onClose}
@@ -142,7 +142,7 @@ export default function FeedbackModal({
             {mode === 'positive' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2 font-sarabun">
-                  What aspects made this response helpful? (Select all that apply)
+                  อะไรทำให้คำตอบนี้มีประโยชน์? (เลือกได้หลายข้อ)
                 </label>
                 <div className="space-y-2">
                   {positiveAspectOptions.map(aspect => (
@@ -167,7 +167,7 @@ export default function FeedbackModal({
             {mode === 'negative' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2 font-sarabun">
-                  What made this response problematic? (Select all that apply)
+                  อะไรทำให้คำตอบนี้มีปัญหา? (เลือกได้หลายข้อ)
                 </label>
                 <div className="space-y-2">
                   {negativeAspectOptions.map(aspect => (
@@ -192,7 +192,7 @@ export default function FeedbackModal({
             {mode === 'detailed' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2 font-sarabun">
-                  Feedback Type *
+                  ประเภทความคิดเห็น *
                 </label>
                 <select
                   value={feedbackType}
@@ -200,12 +200,12 @@ export default function FeedbackModal({
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 font-sarabun focus:outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
                   required
                 >
-                  <option value="">Select feedback type</option>
-                  <option value="helpful">This was helpful</option>
-                  <option value="unhelpful">This was not helpful</option>
-                  <option value="inappropriate">Inappropriate response</option>
-                  <option value="suggestion">I have a suggestion</option>
-                  <option value="error">There was an error</option>
+                  <option value="">เลือกประเภทความคิดเห็น</option>
+                  <option value="helpful">มีประโยชน์</option>
+                  <option value="unhelpful">ไม่มีประโยชน์</option>
+                  <option value="inappropriate">คำตอบไม่เหมาะสม</option>
+                  <option value="suggestion">มีข้อเสนอแนะ</option>
+                  <option value="error">มีข้อผิดพลาด</option>
                 </select>
               </div>
             )}
@@ -216,17 +216,17 @@ export default function FeedbackModal({
                 {/* Emotional Tone */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2 font-sarabun">
-                    How was the emotional tone?
+                    น้ำเสียงในการตอบเป็นอย่างไร?
                   </label>
                   <select
                     value={emotionalTone}
                     onChange={(e) => setEmotionalTone(e.target.value as any)}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 font-sarabun focus:outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
                   >
-                    <option value="">Select tone</option>
-                    <option value="too-formal">Too formal</option>
-                    <option value="just-right">Just right</option>
-                    <option value="too-casual">Too casual</option>
+                    <option value="">เลือกน้ำเสียง</option>
+                    <option value="too-formal">เป็นทางการเกินไป</option>
+                    <option value="just-right">เหมาะสมดี</option>
+                    <option value="too-casual">เป็นกันเองเกินไป</option>
                   </select>
                 </div>
 
@@ -310,14 +310,14 @@ export default function FeedbackModal({
                 onClick={onClose}
                 className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-sarabun"
               >
-                Cancel
+                ยกเลิก
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting || (mode === 'detailed' && !feedbackType) || (mode === 'positive' && positiveAspects.length === 0) || (mode === 'negative' && negativeAspects.length === 0)}
                 className="flex-1 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-sarabun"
               >
-                {isSubmitting ? 'Submitting...' : 'Submit Feedback'}
+                {isSubmitting ? 'กำลังส่ง...' : 'ส่งความคิดเห็น'}
               </button>
             </div>
           </form>
