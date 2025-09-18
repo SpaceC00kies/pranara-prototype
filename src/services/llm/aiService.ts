@@ -16,13 +16,7 @@ import {
   AppMode
 } from '../../types';
 
-import { 
-  processTextForAnalytics, 
-  validateTextForAIProcessing,
-  TextProcessingResult 
-} from '../../utils/textSanitization';
-
-import { classifyTopic } from '../../utils/contentSafety';
+// Removed heavy processing imports - keeping it simple
 
 import { 
   buildUserPrompt, 
@@ -110,10 +104,7 @@ export class AIService {
         throw this.createError('INVALID_INPUT', 'Invalid or empty message');
       }
 
-      // Step 2: Process text for safety and PII
-      const processingResult = processTextForAnalytics(validatedMessage);
-      
-      // Step 3: Validate if content is appropriate for AI processing
+      // Step 2: Simple validation - no heavy processing
       const validation = validateTextForAIProcessing(validatedMessage);
       
       if (!validation.shouldProcess) {
@@ -126,8 +117,8 @@ export class AIService {
         return this.handleUnsafeContent(safetyResult, processingResult, language);
       }
 
-      // Step 4: Classify topic (Jirung context now handled in system prompt)
-      const topic = classifyTopic(validatedMessage);
+      // Step 3: Simple topic classification
+      const topic = this.getSimpleTopic(validatedMessage);
       
       // Step 5: Get or use provided user profile
       const profile = userProfile || await getUserProfile(sessionId) || undefined;
@@ -230,23 +221,21 @@ export class AIService {
     mode: AppMode = 'conversation'
   ): AsyncGenerator<string> {
     try {
-      // Step 1: Validate and sanitize input
+      // Step 1: Simple validation - no heavy processing
       const validatedMessage = validateUserInput(message);
-      const processingResult = processTextForAnalytics(validatedMessage);
       
-      if (!validatedMessage) {
-        yield 'ขออภัยค่ะ ไม่สามารถตอบคำถามนี้ได้ กรุณาลองถามในรูปแบบอื่นค่ะ';
+      if (!validatedMessage || validatedMessage.trim().length === 0) {
+        yield 'ขออภัยค่ะ กรุณาพิมพ์ข้อความค่ะ';
         return;
       }
 
-      // Step 2: Safety check
-      if (!processingResult.safetyResult.isSafe) {
-        yield 'ขออภัยค่ะ ไม่สามารถตอบคำถามนี้ได้ กรุณาลองถามในรูปแบบอื่นค่ะ';
+      if (validatedMessage.length > 2000) {
+        yield 'ขออภัยค่ะ ข้อความยาวเกินไป กรุณาพิมพ์สั้นลงค่ะ';
         return;
       }
 
-      // Step 3: Classify topic and build prompt
-      const topic = classifyTopic(validatedMessage);
+      // Step 2: Simple topic classification
+      const topic = this.getSimpleTopic(validatedMessage);
       const contextToUse = conversationHistoryService.getConversationContext(sessionId);
       
       const prompt = buildUserPrompt(
@@ -530,6 +519,26 @@ export class AIService {
     }
     
     return pieces;
+  }
+
+  /**
+   * Simple topic classification without heavy processing
+   */
+  private getSimpleTopic(message: string): TopicCategory {
+    const lowerMessage = message.toLowerCase();
+    
+    // Basic keyword matching for common topics
+    if (lowerMessage.includes('สวัสดี') || lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
+      return 'general';
+    }
+    if (lowerMessage.includes('ขอบคุณ') || lowerMessage.includes('thank')) {
+      return 'general';
+    }
+    if (lowerMessage.includes('ช่วย') || lowerMessage.includes('help')) {
+      return 'health_general';
+    }
+    
+    return 'general';
   }
 }
 

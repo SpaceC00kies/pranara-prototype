@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -16,9 +16,6 @@
     "test:e2e:debug": "playwright test --debug",
     "test:all": "npm run test:run && npm run test:e2e",
     "test:coverage": "vitest run --coverage",
-    "test:qa": "node scripts/run-qa-tests.js",
-    "deploy:check": "node scripts/deployment-check.js",
-    "deploy:test": "node scripts/production-test.js",
     "deploy:verify": "scripts/verify-deployment.sh",
     "deploy:verify:full": "scripts/verify-deployment.sh http://localhost:3000 --full",
     "deploy:vercel": "vercel --prod",
@@ -26,14 +23,12 @@
     "analyze": "ANALYZE=true npm run build",
     "lighthouse": "lighthouse http://localhost:3000 --output=html --output-path=./lighthouse-report.html --chrome-flags='--headless'",
     "perf:test": "npm run test:e2e -- --grep='Performance'",
-    "a11y:test": "npm run test:e2e -- --grep='Accessibility'",
-    "db:migrate": "node scripts/migrate-to-postgres.js",
-    "db:setup": "node scripts/migrate-to-postgres.js",
-    "kv:migrate": "node scripts/migrate-to-postgres.js"
+    "a11y:test": "npm run test:e2e -- --grep='Accessibility'"
   },
   "dependencies": {
     "@google-cloud/vertexai": "^1.9.0",
     "@google/generative-ai": "^0.24.1",
+    "@supabase/supabase-js": "^2.57.4",
     "autoprefixer": "^10.4.21",
     "dotenv": "^17.2.2",
     "next": "15.5.2",

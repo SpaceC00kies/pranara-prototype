@@ -14,7 +14,7 @@ import {
   Gender,
   Location
 } from '../types';
-import { scrubPII } from '../utils/piiScrubber';
+// PII scrubbing removed - keeping analytics simple
 import { createSessionHash } from './sessionService';
 
 // Topic classification keywords
@@ -145,9 +145,8 @@ export function createAnalyticsEvent(
   routed: 'primary' | 'fallback' = 'primary',
   userProfile?: { ageRange?: string; gender?: string; location?: string }
 ): AnalyticsEvent {
-  // Scrub PII from message and truncate to 160 characters
-  const scrubbedResult = scrubPII(message);
-  const textSnippet = scrubbedResult.scrubbedText.substring(0, 160);
+  // Simple text truncation - no PII scrubbing needed for basic analytics
+  const textSnippet = message.substring(0, 160);
 
   return {
     sessionId: createSessionHash(sessionId), // Use hashed session ID

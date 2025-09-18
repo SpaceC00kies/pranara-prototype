@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import FeedbackModal from '../components/feedback/FeedbackModal';
 
 export default function Home() {
   const [messages, setMessages] = useState<Array<{
@@ -11,19 +12,21 @@ export default function Home() {
   }>>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [isTextareaExpanded, setIsTextareaExpanded] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [hasStartedChat, setHasStartedChat] = useState(false);
-  const [currentPlaceholder, setCurrentPlaceholder] = useState('');
-  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Typing animation placeholders
-  const placeholders = [
-    'วันนี้เครียดจังเลย...',
-    'ที่ทำงาน Toxic มาก!',
-    'ทะเลาะกับแฟนมา...',
-  ];
+  // Feedback system state
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackMessageId, setFeedbackMessageId] = useState<string | null>(null);
+  const [feedbackMessageText, setFeedbackMessageText] = useState<string>('');
+  const [feedbackMode, setFeedbackMode] = useState<'detailed' | 'positive' | 'quick'>('detailed');
+
+
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -64,48 +67,7 @@ export default function Home() {
     }
   }, []);
 
-  // Typing animation effect for placeholder
-  useEffect(() => {
-    if (hasStartedChat) return; // Don't run animation in chat mode
 
-    let currentText = '';
-    let currentIndex = 0;
-    let isDeleting = false;
-    let timeoutId: NodeJS.Timeout;
-
-    const typeText = () => {
-      const fullText = placeholders[placeholderIndex];
-
-      if (isDeleting) {
-        currentText = fullText.substring(0, currentText.length - 1);
-      } else {
-        currentText = fullText.substring(0, currentIndex + 1);
-        currentIndex++;
-      }
-
-      setCurrentPlaceholder(currentText);
-
-      let typeSpeed = isDeleting ? 50 : 100;
-
-      if (!isDeleting && currentText === fullText) {
-        typeSpeed = 2000; // Pause at end
-        isDeleting = true;
-        currentIndex = 0;
-      } else if (isDeleting && currentText === '') {
-        isDeleting = false;
-        setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
-        typeSpeed = 500; // Pause before next text
-      }
-
-      timeoutId = setTimeout(typeText, typeSpeed);
-    };
-
-    typeText();
-
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [placeholderIndex, hasStartedChat]);
 
   // Start with empty messages - no greeting for professional feel
   // Users will initiate conversation naturally
@@ -130,14 +92,14 @@ export default function Home() {
 
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
-    setIsLoading(true);
+    setIsTextareaExpanded(false);
+    setIsLoading(true); // 1. Turn ON the main loading indicator
+    setIsStreaming(true); // Also turn ON streaming state
 
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userMessage.text,
           sessionId,
@@ -149,20 +111,10 @@ export default function Home() {
         throw new Error(`HTTP ${response.status}`);
       }
 
-      // Create assistant message placeholder
-      const assistantMessageId = crypto.randomUUID();
-      const assistantMessage = {
-        id: assistantMessageId,
-        text: '',
-        sender: 'assistant' as const,
-        timestamp: new Date(),
-      };
-
-      setMessages(prev => [...prev, assistantMessage]);
-
-      // Read streaming response
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
+      let isFirstChunk = true;
+      let assistantMessageId = '';
 
       if (reader) {
         try {
@@ -177,17 +129,26 @@ export default function Home() {
               try {
                 const data = JSON.parse(line);
                 if (data.chunk) {
-                  // Turn off loading as soon as we get the first chunk
-                  if (isLoading) {
+                  if (isFirstChunk) {
+                    // 2. On the FIRST chunk, turn OFF the indicator and CREATE the message bubble
                     setIsLoading(false);
+                    isFirstChunk = false;
+                    assistantMessageId = crypto.randomUUID();
+                    const newAssistantMessage = {
+                      id: assistantMessageId,
+                      text: data.chunk, // Start with the first chunk of text
+                      sender: 'assistant' as const,
+                      timestamp: new Date(),
+                    };
+                    setMessages(prev => [...prev, newAssistantMessage]);
+                  } else {
+                    // 3. For ALL SUBSEQUENT chunks, just update the existing message bubble
+                    setMessages(prev => prev.map(msg =>
+                      msg.id === assistantMessageId
+                        ? { ...msg, text: msg.text + data.chunk }
+                        : msg
+                    ));
                   }
-
-                  // Update the assistant message with new chunk
-                  setMessages(prev => prev.map(msg =>
-                    msg.id === assistantMessageId
-                      ? { ...msg, text: msg.text + data.chunk }
-                      : msg
-                  ));
                 }
               } catch (e) {
                 // Skip invalid JSON lines
@@ -196,6 +157,7 @@ export default function Home() {
           }
         } finally {
           reader.releaseLock();
+          setIsStreaming(false); // Turn OFF streaming when done
         }
       }
 
@@ -211,14 +173,90 @@ export default function Home() {
 
       setMessages(prev => [...prev, errorMessage]);
     } finally {
+      // Ensure loading is always turned off in the end
       setIsLoading(false);
+      setIsStreaming(false);
+    }
+  };
+
+  // Feedback system functions
+  const handleQuickFeedback = async (messageId: string, type: 'helpful' | 'unhelpful') => {
+    if (!sessionId) return;
+
+    try {
+      if (type === 'helpful') {
+        // For positive feedback, show positive aspects selector
+        openFeedbackModal(messageId, '', 'positive');
+      } else {
+        // Submit negative feedback immediately
+        await submitFeedback({
+          messageId,
+          sessionId,
+          feedbackType: type,
+          timestamp: new Date()
+        });
+        
+        // Show brief success message (optional)
+        console.log('✅ Quick feedback submitted:', type);
+      }
+    } catch (error) {
+      console.error('❌ Error submitting quick feedback:', error);
+    }
+  };
+
+  const openFeedbackModal = (messageId: string, messageText: string, mode: 'detailed' | 'positive' | 'quick') => {
+    setFeedbackMessageId(messageId);
+    setFeedbackMessageText(messageText);
+    setFeedbackMode(mode);
+    setShowFeedbackModal(true);
+  };
+
+  const closeFeedbackModal = () => {
+    setShowFeedbackModal(false);
+    setFeedbackMessageId(null);
+    setFeedbackMessageText('');
+    setFeedbackMode('detailed');
+  };
+
+  const submitFeedback = async (feedbackData: {
+    messageId: string;
+    sessionId: string;
+    feedbackType: string;
+    selectedText?: string;
+    userComment?: string;
+    emotionalTone?: string;
+    responseLength?: string;
+    culturalSensitivity?: string;
+    positiveAspects?: string[];
+    timestamp: Date;
+  }) => {
+    try {
+      const response = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(feedbackData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit feedback');
+      }
+
+      const result = await response.json();
+      console.log('✅ Feedback submitted successfully:', result);
+      
+      return result;
+    } catch (error) {
+      console.error('❌ Error submitting feedback:', error);
+      throw error;
     }
   };
 
   if (!hasStartedChat) {
     // Initial landing page - Claude-style centered input
     return (
-      <div className="h-dvh bg-primary-100 flex flex-col">
+      <div className="min-h-dvh bg-primary-100 flex flex-col">
         {/* Centered Welcome Section */}
         <div className="flex-1 flex flex-col items-center justify-center px-6 max-w-4xl mx-auto w-full">
           {/* Pranara Logo/Title */}
@@ -240,78 +278,80 @@ export default function Home() {
 
           {/* Main Input Box */}
           <div className="w-full max-w-2xl relative">
-            <form onSubmit={handleSubmit} className="relative">
-              <textarea
-                ref={inputRef}
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                autoFocus={false}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit(e as React.FormEvent);
-                  }
-                }}
-                placeholder={currentPlaceholder}
-                className="
-                  w-full px-3 md:px-6 py-2 md:py-4 pr-10 md:pr-14
-                  bg-white/90 backdrop-blur-sm border-2 border-gray-200 rounded-2xl
-                  font-sarabun text-sm md:text-lg
-                  placeholder-gray-400
-                  focus:outline-none focus:border-primary-300
-                  resize-none overflow-hidden
-                  min-h-[48px] md:min-h-[60px] max-h-40
-                  transition-colors duration-150
-                "
-                rows={1}
-                disabled={isLoading}
-                style={{
-                  height: '60px',
-                  lineHeight: '1.5'
-                }}
-                onInput={(e) => {
-                  const target = e.target as HTMLTextAreaElement;
-                  target.style.height = '60px';
-                  target.style.height = Math.min(target.scrollHeight, 160) + 'px';
-                }}
-              />
+            <form onSubmit={handleSubmit}>
+              <div className="relative">
+                <textarea
+                  ref={inputRef}
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  autoFocus={false}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSubmit(e as React.FormEvent);
+                    }
+                  }}
+                  placeholder="วันนี้อยากระบายอะไรคะ?"
+                  className="
+                    w-full px-4 md:px-6 py-4 md:py-5 pr-16 md:pr-20
+                    bg-gray-50 border border-gray-200 rounded-2xl
+                    font-sarabun text-base md:text-lg
+                    placeholder-gray-400
+                    focus:outline-none focus:border-primary-300 focus:bg-white
+                    resize-none overflow-hidden
+                    min-h-[80px] md:min-h-[100px] max-h-48
+                    transition-colors duration-200
+                  "
+                  disabled={isLoading}
+                  style={{
+                    height: '100px',
+                    lineHeight: '1.5'
+                  }}
+                  onInput={(e) => {
+                    const target = e.target as HTMLTextAreaElement;
+                    target.style.height = 'auto';
+                    const newHeight = Math.max(Math.min(target.scrollHeight, 192), 100);
+                    target.style.height = newHeight + 'px';
+                  }}
+                />
 
-              {/* Send Button */}
-              <button
-                type="submit"
-                disabled={!inputValue.trim() || isLoading || !sessionId}
-                className={`
-                  absolute right-3 top-[30px] -translate-y-1/2
-                  w-10 h-10 rounded-xl
-                  ${inputValue.trim() && !isLoading && sessionId
-                    ? 'bg-primary-300 hover:bg-primary-400 text-gray-800'
-                    : 'bg-gray-200 text-gray-400'
-                  }
-                  flex items-center justify-center
-                  transition-all duration-200
-                  focus:outline-none focus:ring-2 focus:ring-primary-200
-                  disabled:cursor-not-allowed
-                `}
-                aria-label="ส่งข้อความ"
-              >
-                {isLoading ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                    />
-                  </svg>
-                )}
-              </button>
+                {/* Send Button */}
+                <button
+                  type="submit"
+                  disabled={!inputValue.trim() || isLoading || !sessionId}
+                  className={`
+                    absolute right-3 bottom-3
+                    w-8 h-8 rounded-lg
+                    ${inputValue.trim() && !isLoading && sessionId
+                      ? 'bg-primary-300 hover:bg-primary-400 text-gray-800'
+                      : 'bg-gray-200 text-gray-400'
+                    }
+                    flex items-center justify-center
+                    transition-all duration-300 ease-out
+                    focus:outline-none focus:ring-2 focus:ring-primary-200
+                    disabled:cursor-not-allowed
+                  `}
+                  aria-label="ส่งข้อความ"
+                >
+                  {isLoading ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 19V5m-7 7l7-7 7 7"
+                      />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </form>
 
             {/* Model Selection - Smaller and Closer */}
@@ -341,7 +381,7 @@ export default function Home() {
 
   // Chat interface after first message
   return (
-    <div className="h-dvh bg-primary-100 flex flex-col">
+    <div className="min-h-dvh bg-primary-100 flex flex-col">
       {/* Compact Header */}
       <div className="flex-shrink-0 border-b border-primary-200 px-6 py-4">
         <div className="flex items-center justify-center max-w-4xl mx-auto">
@@ -350,6 +390,7 @@ export default function Home() {
               setMessages([]);
               setHasStartedChat(false);
               setInputValue('');
+              setIsTextareaExpanded(false);
             }}
             className="flex items-center space-x-1 hover:opacity-80 transition-opacity focus:outline-none"
           >
@@ -397,16 +438,53 @@ export default function Home() {
                             className="w-full h-full object-contain"
                           />
                         </div>
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 group">
                           <div className="font-sarabun text-base leading-relaxed text-gray-800 whitespace-pre-wrap">
                             {message.text}
                           </div>
-                          {/* Claude-style warning - only show on the last assistant message */}
-                          {message.text && message.id === messages.filter(m => m.sender === 'assistant').slice(-1)[0]?.id && (
-                            <div className="mt-2 text-xs text-gray-400 font-sarabun">
-                              ปราณาราสามารถผิดพลาดได้ โปรดพิจารณาคำตอบอีกครั้ง
+                          
+                          {/* Feedback Buttons - appear first, right aligned */}
+                          {message.text && !isLoading && !isStreaming && message.id === messages.filter(m => m.sender === 'assistant').slice(-1)[0]?.id && (
+                            <div className="flex justify-end mt-2">
+                              <div className="flex items-center space-x-0.5 animate-fade-in">
+                                <button 
+                                  onClick={() => handleQuickFeedback(message.id, 'helpful')}
+                                  className="p-0.5 w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 transition-colors opacity-50 hover:opacity-100 focus:outline-none focus:ring-1 focus:ring-gray-300"
+                                  title="This response was helpful"
+                                  aria-label="Mark as helpful"
+                                >
+                                  <img src="/like.png" alt="Like" className="w-3.5 h-3.5" />
+                                </button>
+                                <button 
+                                  onClick={() => openFeedbackModal(message.id, message.text, 'negative')}
+                                  className="p-0.5 w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 transition-colors opacity-50 hover:opacity-100 focus:outline-none focus:ring-1 focus:ring-gray-300"
+                                  title="This response was not helpful - provide feedback"
+                                  aria-label="Provide negative feedback"
+                                >
+                                  <img src="/dont-like.png" alt="Don't like" className="w-3.5 h-3.5" />
+                                </button>
+                                <button 
+                                  onClick={() => openFeedbackModal(message.id, message.text, 'detailed')}
+                                  className="p-0.5 w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 transition-colors opacity-50 hover:opacity-100 focus:outline-none focus:ring-1 focus:ring-gray-300"
+                                  title="Provide detailed feedback"
+                                  aria-label="Provide feedback"
+                                >
+                                  <img src="/form.png" alt="Feedback form" className="w-3.5 h-3.5" />
+                                </button>
+
+                              </div>
                             </div>
                           )}
+                          
+                          {/* Disclaimer - appears after buttons, right aligned */}
+                          {message.text && !isLoading && !isStreaming && message.id === messages.filter(m => m.sender === 'assistant').slice(-1)[0]?.id && (
+                            <div className="flex justify-end mt-1">
+                              <div className="text-xs text-gray-400 font-sarabun animate-fade-in-delayed">
+                                ปราณาราสามารถผิดพลาดได้ โปรดพิจารณาคำตอบอีกครั้ง
+                              </div>
+                            </div>
+                          )}
+
                         </div>
                       </div>
                     </div>
@@ -441,81 +519,100 @@ export default function Home() {
 
         {/* Input Area */}
         <div className="flex-shrink-0 px-6 py-4">
-          <form onSubmit={handleSubmit} className="relative max-w-4xl mx-auto">
-            <textarea
-              ref={inputRef}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              autoFocus={false}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmit(e as React.FormEvent);
-                }
-              }}
-              placeholder="พิมพ์คุยกับปราณารา"
-              className="
-                w-full px-4 py-3 pr-12
-                bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl
-                font-sarabun text-base
-                placeholder-gray-400
-                focus:outline-none focus:border-primary-300
-                resize-none overflow-hidden
-                min-h-[48px] max-h-32
-                transition-colors duration-150
-              "
-              rows={1}
-              disabled={isLoading}
-              style={{
-                height: '48px',
-                lineHeight: '1.5'
-              }}
-              onInput={(e) => {
-                const target = e.target as HTMLTextAreaElement;
-                target.style.height = '48px';
-                target.style.height = Math.min(target.scrollHeight, 128) + 'px';
-              }}
-            />
+          <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
+            <div className="relative">
+              <textarea
+                ref={inputRef}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                autoFocus={false}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmit(e as React.FormEvent);
+                  }
+                }}
+                placeholder="พิมพ์คุยกับปราณารา"
+                className="
+                  w-full px-4 py-3 pr-12
+                  bg-gray-50 border border-gray-200 rounded-xl
+                  font-sarabun text-base
+                  placeholder-gray-400
+                  focus:outline-none focus:border-primary-300 focus:bg-white
+                  resize-none overflow-hidden
+                  min-h-[60px] max-h-32
+                  transition-colors duration-200
+                "
+                disabled={isLoading}
+                style={{
+                  height: '60px',
+                  lineHeight: '1.5'
+                }}
+                onInput={(e) => {
+                  const target = e.target as HTMLTextAreaElement;
+                  // Reset to minimum height first to get accurate scrollHeight
+                  target.style.height = '60px';
+                  const newHeight = Math.max(Math.min(target.scrollHeight, 128), 60);
+                  target.style.height = newHeight + 'px';
+                }}
+              />
 
-            {/* Send Button */}
-            <button
-              type="submit"
-              disabled={!inputValue.trim() || isLoading || !sessionId}
-              className={`
-                absolute right-2 md:right-3 top-[24px] md:top-[30px] -translate-y-1/2
-                w-7 h-7 md:w-8 md:h-8 rounded-lg
-                ${inputValue.trim() && !isLoading && sessionId
-                  ? 'bg-primary-300 hover:bg-primary-400 text-gray-800'
-                  : 'bg-gray-200 text-gray-400'
-                }
-                flex items-center justify-center
-                transition-all duration-200
-                focus:outline-none focus:ring-2 focus:ring-primary-200
-                disabled:cursor-not-allowed
-              `}
-              aria-label="ส่งข้อความ"
-            >
-              {isLoading ? (
-                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                  />
-                </svg>
-              )}
-            </button>
+              {/* Send Button */}
+              <button
+                type="submit"
+                disabled={!inputValue.trim() || isLoading || !sessionId}
+                className={`
+                  absolute right-3 bottom-3
+                  w-7 h-7 rounded-lg
+                  ${inputValue.trim() && !isLoading && sessionId
+                    ? 'bg-primary-300 hover:bg-primary-400 text-gray-800'
+                    : 'bg-gray-200 text-gray-400'
+                  }
+                  flex items-center justify-center
+                  transition-all duration-300 ease-out
+                  focus:outline-none focus:ring-2 focus:ring-primary-200
+                  disabled:cursor-not-allowed
+                `}
+                aria-label="ส่งข้อความ"
+              >
+                {isLoading ? (
+                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 19V5m-7 7l7-7 7 7"
+                    />
+                  </svg>
+                )}
+              </button>
+            </div>
           </form>
         </div>
       </div>
+
+      {/* Feedback Modal */}
+      {showFeedbackModal && feedbackMessageId && (
+        <FeedbackModal
+          messageId={feedbackMessageId}
+          messageText={feedbackMessageText}
+          onClose={closeFeedbackModal}
+          onSubmit={async (feedbackData) => {
+            await submitFeedback({
+              ...feedbackData,
+              sessionId: sessionId || ''
+            });
+          }}
+          mode={feedbackMode}
+        />
+      )}
     </div>
   );
 }

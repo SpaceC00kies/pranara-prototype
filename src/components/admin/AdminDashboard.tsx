@@ -38,6 +38,32 @@ interface ExtendedStatsResponse extends AdminStatsResponse {
     abandonmentRate: number;
     conversionRate: number;
   };
+  feedbackAnalytics: {
+    totalFeedback: number;
+    satisfactionRate: number;
+    feedbackByType: Record<string, number>;
+    feedbackByPromptVersion: Record<string, number>;
+    averageRating: number;
+    commonIssues: Array<{
+      category: string;
+      count: number;
+      examples: string[];
+    }>;
+    trendData: Array<{
+      date: string;
+      positive: number;
+      negative: number;
+    }>;
+  };
+  recentFeedback: Array<{
+    id: number;
+    messageId: string;
+    feedbackType: string;
+    userComment: string;
+    positiveAspects: string[];
+    createdAt: string;
+    isReviewed: boolean;
+  }>;
 }
 
 export default function AdminDashboard({ onClose }: AdminDashboardProps) {
@@ -47,6 +73,11 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   const [period, setPeriod] = useState('7d');
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [aiInsights, setAiInsights] = useState<any>(null);
+  const [promptAnalysis, setPromptAnalysis] = useState<any>(null);
+  const [goldStandard, setGoldStandard] = useState<any>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
 
   const fetchData = async (adminPassword: string, selectedPeriod: string = period) => {
     try {
@@ -77,6 +108,74 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
       setError(err instanceof Error ? err.message : 'Failed to fetch data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAIInsights = async () => {
+    try {
+      setAiLoading(true);
+      const response = await fetch('/api/ai-analysis?type=insights');
+      if (response.ok) {
+        const result = await response.json();
+        setAiInsights(result.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch AI insights:', err);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const fetchPromptAnalysis = async () => {
+    try {
+      const response = await fetch('/api/ai-analysis?type=prompt-analysis');
+      if (response.ok) {
+        const result = await response.json();
+        setPromptAnalysis(result.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch prompt analysis:', err);
+    }
+  };
+
+  const fetchGoldStandard = async () => {
+    try {
+      const response = await fetch('/api/ai-analysis?type=gold-standard');
+      if (response.ok) {
+        const result = await response.json();
+        setGoldStandard(result.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch gold standard:', err);
+    }
+  };
+
+  const triggerBatchAnalysis = async () => {
+    if (!data?.recentFeedback) return;
+    
+    try {
+      setAiLoading(true);
+      const feedbackIds = data.recentFeedback.map(f => f.id);
+      
+      const response = await fetch('/api/ai-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          feedbackIds,
+          action: 'batch-analyze'
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Batch analysis completed:', result.data);
+        // Refresh AI insights after analysis
+        await fetchAIInsights();
+      }
+    } catch (err) {
+      console.error('Batch analysis failed:', err);
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -262,10 +361,44 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Tab Navigation */}
+        <div className="mb-8">
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8">
+              {[
+                { id: 'overview', name: 'Overview', icon: '📊' },
+                { id: 'ai-insights', name: 'AI Insights', icon: '🤖' },
+                { id: 'prompt-analysis', name: 'Prompt Analysis', icon: '🔍' },
+                { id: 'gold-standard', name: 'Gold Standard', icon: '⭐' }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    if (tab.id === 'ai-insights' && !aiInsights) fetchAIInsights();
+                    if (tab.id === 'prompt-analysis' && !promptAnalysis) fetchPromptAnalysis();
+                    if (tab.id === 'gold-standard' && !goldStandard) fetchGoldStandard();
+                  }}
+                  className={`${
+                    activeTab === tab.id
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2`}
+                >
+                  <span>{tab.icon}</span>
+                  <span>{tab.name}</span>
+                </button>
+              ))}
+            </nav>
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Key Metrics */}
           <div className="lg:col-span-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
               <MetricCard
                 title="Total Questions"
                 value={data.stats.totalQuestions.toLocaleString()}
@@ -279,16 +412,22 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                 color="green"
               />
               <MetricCard
+                title="Total Feedback"
+                value={data.feedbackAnalytics?.totalFeedback?.toLocaleString() || '0'}
+                icon="📝"
+                color="indigo"
+              />
+              <MetricCard
+                title="Satisfaction Rate"
+                value={`${data.feedbackAnalytics?.satisfactionRate?.toFixed(1) || '0'}%`}
+                icon="😊"
+                color="emerald"
+              />
+              <MetricCard
                 title="LINE Click Rate"
                 value={`${data.stats.lineClickRate.toFixed(1)}%`}
                 icon="📞"
                 color="purple"
-              />
-              <MetricCard
-                title="Avg Response Time"
-                value={`${data.stats.averageResponseTime.toFixed(1)}s`}
-                icon="⚡"
-                color="orange"
               />
             </div>
           </div>
@@ -383,24 +522,337 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
             </div>
           </div>
 
-          {/* Common Patterns */}
+          {/* Feedback by Type */}
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Common Conversation Patterns</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Feedback by Type</h3>
             <div className="space-y-3">
-              {data.commonPatterns.slice(0, 5).map((pattern, index) => (
-                <div key={index} className="border border-gray-200 rounded-md p-3">
-                  <div className="text-sm font-medium text-gray-900 mb-1">
-                    {pattern.pattern.join(' → ')}
+              {data.feedbackAnalytics && Object.entries(data.feedbackAnalytics.feedbackByType).map(([type, count]) => (
+                <div key={type} className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <span className={`w-3 h-3 rounded-full mr-2 ${
+                      type === 'helpful' ? 'bg-green-500' : 
+                      type === 'unhelpful' ? 'bg-red-500' : 
+                      type === 'inappropriate' ? 'bg-orange-500' : 'bg-gray-500'
+                    }`}></span>
+                    <span className="text-sm text-gray-900 capitalize">
+                      {type.replace('_', ' ')}
+                    </span>
                   </div>
-                  <div className="flex justify-between text-xs text-gray-500">
-                    <span>{pattern.frequency} sessions</span>
-                    <span>{pattern.lineHandoffRate.toFixed(1)}% handoff</span>
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-gray-900">{count}</div>
+                    <div className="text-xs text-gray-500">
+                      {data.feedbackAnalytics.totalFeedback > 0 ? 
+                        ((count / data.feedbackAnalytics.totalFeedback) * 100).toFixed(1) : '0'}%
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
+
+          {/* Recent Feedback */}
+          <div className="lg:col-span-2 bg-white rounded-lg shadow-sm p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Recent Feedback</h3>
+              <button
+                onClick={() => window.open('/admin/feedback', '_blank')}
+                className="text-sm text-blue-600 hover:text-blue-800"
+              >
+                View All →
+              </button>
+            </div>
+            <div className="space-y-4">
+              {data.recentFeedback?.slice(0, 5).map((feedback) => (
+                <div key={feedback.id} className="border border-gray-200 rounded-md p-3">
+                  <div className="flex items-start justify-between mb-2">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      feedback.feedbackType === 'helpful' ? 'bg-green-100 text-green-800' :
+                      feedback.feedbackType === 'unhelpful' ? 'bg-red-100 text-red-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {feedback.feedbackType}
+                    </span>
+                    <span className={`w-2 h-2 rounded-full ${
+                      feedback.isReviewed ? 'bg-green-500' : 'bg-yellow-500'
+                    }`} title={feedback.isReviewed ? 'Reviewed' : 'Pending Review'}></span>
+                  </div>
+                  {feedback.userComment && (
+                    <p className="text-sm text-gray-700 mb-2 line-clamp-2">
+                      "{feedback.userComment}"
+                    </p>
+                  )}
+                  {feedback.positiveAspects && feedback.positiveAspects.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {feedback.positiveAspects.slice(0, 3).map((aspect, idx) => (
+                        <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-blue-50 text-blue-700">
+                          {aspect.replace('-', ' ')}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="text-xs text-gray-500">
+                    {new Date(feedback.createdAt).toLocaleDateString()} • ID: {feedback.messageId.substring(0, 8)}...
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Common Issues */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Common Issues</h3>
+            <div className="space-y-3">
+              {data.feedbackAnalytics?.commonIssues?.slice(0, 5).map((issue, index) => (
+                <div key={index} className="border-l-4 border-red-200 pl-4 py-2">
+                  <div className="text-sm font-medium text-gray-900 mb-1">
+                    {issue.category.replace('_', ' ').replace('-', ' ')}
+                  </div>
+                  <div className="text-xs text-gray-500 mb-1">
+                    {issue.count} reports
+                  </div>
+                  {issue.examples.length > 0 && (
+                    <div className="text-xs text-gray-600 italic">
+                      "{issue.examples[0].substring(0, 60)}..."
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
+        )}
+
+        {/* AI Insights Tab */}
+        {activeTab === 'ai-insights' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold text-gray-900">AI Analysis Insights</h2>
+              <button
+                onClick={triggerBatchAnalysis}
+                disabled={aiLoading}
+                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
+              >
+                {aiLoading ? 'Analyzing...' : 'Run Batch Analysis'}
+              </button>
+            </div>
+
+            {aiInsights ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <MetricCard
+                  title="Total Analyzed"
+                  value={aiInsights.totalAnalyzed.toLocaleString()}
+                  icon="🔍"
+                  color="blue"
+                />
+                <MetricCard
+                  title="Avg Confidence"
+                  value={`${(aiInsights.averageConfidence * 100).toFixed(1)}%`}
+                  icon="🎯"
+                  color="green"
+                />
+                <MetricCard
+                  title="Avg Sentiment"
+                  value={`${(aiInsights.averageSentiment * 100).toFixed(1)}%`}
+                  icon="😊"
+                  color="emerald"
+                />
+                <MetricCard
+                  title="Categories"
+                  value={Object.keys(aiInsights.categoryDistribution).length.toString()}
+                  icon="📂"
+                  color="purple"
+                />
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500">Click "Run Batch Analysis" to generate AI insights</p>
+              </div>
+            )}
+
+            {aiInsights && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Category Distribution */}
+                <div className="bg-white rounded-lg shadow-sm p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Category Distribution</h3>
+                  <div className="space-y-3">
+                    {Object.entries(aiInsights.categoryDistribution).map(([category, count]) => (
+                      <div key={category} className="flex items-center justify-between">
+                        <span className="text-sm text-gray-900 capitalize">{category}</span>
+                        <div className="text-right">
+                          <div className="text-sm font-medium text-gray-900">{count}</div>
+                          <div className="text-xs text-gray-500">
+                            {((count / aiInsights.totalAnalyzed) * 100).toFixed(1)}%
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Top Suggested Actions */}
+                <div className="bg-white rounded-lg shadow-sm p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Suggested Actions</h3>
+                  <div className="space-y-3">
+                    {aiInsights.topSuggestedActions.map((action: any, index: number) => (
+                      <div key={index} className="border-l-4 border-blue-200 pl-4 py-2">
+                        <div className="text-sm text-gray-900 mb-1">{action.action}</div>
+                        <div className="text-xs text-gray-500">{action.count} times</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Prompt Analysis Tab */}
+        {activeTab === 'prompt-analysis' && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold text-gray-900">Prompt Version Performance</h2>
+            
+            {promptAnalysis ? (
+              <div className="space-y-6">
+                {promptAnalysis.map((version: any, index: number) => (
+                  <div key={index} className="bg-white rounded-lg shadow-sm p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">Version: {version.version}</h3>
+                        <p className="text-sm text-gray-600">{version.totalResponses} responses</p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-blue-600">
+                          {version.averageRating.toFixed(1)}/5
+                        </div>
+                        <div className="text-xs text-gray-500">Average Rating</div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div>
+                        <div className="text-sm text-gray-600">Confidence</div>
+                        <div className="text-lg font-semibold text-green-600">
+                          {(version.averageConfidence * 100).toFixed(1)}%
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-600">Sentiment</div>
+                        <div className="text-lg font-semibold text-emerald-600">
+                          {(version.averageSentiment * 100).toFixed(1)}%
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-600">Top Category</div>
+                        <div className="text-lg font-semibold text-purple-600">
+                          {Object.entries(version.categoryBreakdown).sort(([,a], [,b]) => (b as number) - (a as number))[0]?.[0] || 'N/A'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {version.topSuccessPatterns.length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Success Patterns</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {version.topSuccessPatterns.slice(0, 5).map((pattern: string, idx: number) => (
+                            <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-green-50 text-green-700">
+                              {pattern}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {version.improvementSuggestions.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Improvement Suggestions</h4>
+                        <div className="space-y-1">
+                          {version.improvementSuggestions.slice(0, 3).map((suggestion: string, idx: number) => (
+                            <div key={idx} className="text-sm text-gray-700 border-l-2 border-orange-200 pl-3">
+                              {suggestion}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500">Loading prompt analysis...</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Gold Standard Tab */}
+        {activeTab === 'gold-standard' && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold text-gray-900">Gold Standard Responses</h2>
+            
+            {goldStandard ? (
+              <div className="space-y-4">
+                {goldStandard.map((item: any, index: number) => (
+                  <div key={index} className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-yellow-400">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <div className="text-sm text-gray-600">Message ID: {item.messageId}</div>
+                        <div className="text-sm text-gray-600">Prompt Version: {item.promptVersion}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-medium text-green-600">
+                          Sentiment: {(item.sentimentScore * 100).toFixed(1)}%
+                        </div>
+                        <div className="text-sm font-medium text-blue-600">
+                          Confidence: {(item.confidenceScore * 100).toFixed(1)}%
+                        </div>
+                      </div>
+                    </div>
+
+                    {item.userComment && (
+                      <div className="mb-3">
+                        <div className="text-sm font-medium text-gray-900 mb-1">User Comment:</div>
+                        <div className="text-sm text-gray-700 italic">"{item.userComment}"</div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {item.successPatterns.length > 0 && (
+                        <div>
+                          <div className="text-sm font-medium text-gray-900 mb-2">Success Patterns</div>
+                          <div className="flex flex-wrap gap-1">
+                            {item.successPatterns.map((pattern: string, idx: number) => (
+                              <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-green-50 text-green-700">
+                                {pattern}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {item.positiveAspects.length > 0 && (
+                        <div>
+                          <div className="text-sm font-medium text-gray-900 mb-2">Positive Aspects</div>
+                          <div className="flex flex-wrap gap-1">
+                            {item.positiveAspects.map((aspect: string, idx: number) => (
+                              <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-blue-50 text-blue-700">
+                                {aspect.replace('-', ' ')}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500">Loading gold standard responses...</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -410,7 +862,7 @@ interface MetricCardProps {
   title: string;
   value: string;
   icon: string;
-  color: 'blue' | 'green' | 'purple' | 'orange';
+  color: 'blue' | 'green' | 'purple' | 'orange' | 'indigo' | 'emerald';
 }
 
 function MetricCard({ title, value, icon, color }: MetricCardProps) {
@@ -418,7 +870,9 @@ function MetricCard({ title, value, icon, color }: MetricCardProps) {
     blue: 'bg-blue-50 text-blue-600',
     green: 'bg-green-50 text-green-600',
     purple: 'bg-purple-50 text-purple-600',
-    orange: 'bg-orange-50 text-orange-600'
+    orange: 'bg-orange-50 text-orange-600',
+    indigo: 'bg-indigo-50 text-indigo-600',
+    emerald: 'bg-emerald-50 text-emerald-600'
   };
 
   return (

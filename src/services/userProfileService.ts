@@ -3,9 +3,9 @@
  * Handles user profile creation, management, and demographic-aware analysis
  */
 
-import { 
-  UserProfile, 
-  UserProfileRequest, 
+import {
+  UserProfile,
+  UserProfileRequest,
   UserProfileResponse,
   AgeRange,
   Gender,
@@ -19,11 +19,10 @@ import { getDatabase } from './databaseService';
 export async function createOrUpdateUserProfile(
   request: UserProfileRequest
 ): Promise<UserProfileResponse> {
-  const db = await getDatabase();
-  
+
   // Check if profile exists
   const existingProfile = await getUserProfile(request.sessionId);
-  
+
   const now = new Date();
   const profile: UserProfile = {
     id: existingProfile?.id || crypto.randomUUID(),
@@ -63,8 +62,8 @@ export async function createOrUpdateUserProfile(
 export async function getUserProfile(sessionId: string): Promise<UserProfile | null> {
   try {
     const db = await getDatabase();
-    
-    if (db['config'].type === 'kv' && db['kvClient']) {
+
+    if (db['config']?.type === 'kv' && db['kvClient']) {
       const profileData = await db['kvClient'].get(`profile:${sessionId}`);
       if (profileData) {
         const parsed = JSON.parse(profileData);
@@ -74,12 +73,12 @@ export async function getUserProfile(sessionId: string): Promise<UserProfile | n
           updatedAt: new Date(parsed.updatedAt)
         };
       }
-    } else if (db['config'].type === 'postgres' && db['pgClient']) {
+    } else if (db['config']?.type === 'postgres' && db['pgClient']) {
       const result = await db['pgClient'].query(
         'SELECT * FROM user_profiles WHERE session_id = $1',
         [sessionId]
       );
-      
+
       if (result.rows.length > 0) {
         const row = result.rows[0] as Record<string, unknown>;
         return {
@@ -96,7 +95,7 @@ export async function getUserProfile(sessionId: string): Promise<UserProfile | n
         };
       }
     }
-    
+
     return null;
   } catch (error) {
     console.error('Error getting user profile:', error);
@@ -109,20 +108,20 @@ export async function getUserProfile(sessionId: string): Promise<UserProfile | n
  */
 async function storeUserProfile(profile: UserProfile): Promise<void> {
   const db = await getDatabase();
-  
-  if (db['config'].type === 'kv' && db['kvClient']) {
+
+  if (db['config']?.type === 'kv' && db['kvClient']) {
     const profileData = JSON.stringify({
       ...profile,
       createdAt: profile.createdAt.toISOString(),
       updatedAt: profile.updatedAt.toISOString()
     });
-    
+
     await db['kvClient'].set(`profile:${profile.sessionId}`, profileData);
-    
+
     // Also store by profile ID for direct access
     await db['kvClient'].set(`profile_by_id:${profile.id}`, profileData);
-    
-  } else if (db['config'].type === 'postgres' && db['pgClient']) {
+
+  } else if (db['config']?.type === 'postgres' && db['pgClient']) {
     const query = `
       INSERT INTO user_profiles 
       (id, session_id, age_range, gender, location, cultural_context, health_context, created_at, updated_at, is_complete)
@@ -137,7 +136,7 @@ async function storeUserProfile(profile: UserProfile): Promise<void> {
         updated_at = EXCLUDED.updated_at,
         is_complete = EXCLUDED.is_complete
     `;
-    
+
     await db['pgClient'].query(query, [
       profile.id,
       profile.sessionId,
@@ -294,8 +293,8 @@ export function getDemographicContext(profile: UserProfile | null): string {
  */
 export async function initializeUserProfileSchema(): Promise<void> {
   const db = await getDatabase();
-  
-  if (db['config'].type !== 'postgres' || !db['pgClient']) {
+
+  if (db['config']?.type !== 'postgres' || !db['pgClient']) {
     return; // KV doesn't need schema initialization
   }
 

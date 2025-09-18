@@ -209,7 +209,7 @@ export interface PIIReplacementTokens {
 
 export interface PIIScrubbingResult {
   scrubbedText: string;
-  foundPatterns: string[];
+  foundPII: string[];
   isClean: boolean;
 }
 
@@ -503,6 +503,77 @@ export interface LineButtonProps {
   onClick: () => void;
   text?: string;
   className?: string;
+}
+
+// ============================================================================
+// FEEDBACK SYSTEM INTERFACES
+// ============================================================================
+
+export interface FeedbackData {
+  messageId: string;
+  sessionId: string;
+  questionLogId?: number;
+  feedbackType: 'helpful' | 'unhelpful' | 'inappropriate' | 'suggestion' | 'error';
+  selectedText?: string;
+  userComment?: string;
+  emotionalTone?: 'too-formal' | 'too-casual' | 'just-right';
+  responseLength?: 'too-long' | 'too-short' | 'just-right';
+  culturalSensitivity?: 'appropriate' | 'inappropriate' | 'unsure';
+  positiveAspects?: string[];
+  negativeAspects?: string[];
+  promptVersion?: string;
+  timestamp: Date;
+}
+
+export interface FeedbackAnalytics {
+  totalFeedback: number;
+  satisfactionRate: number;
+  commonIssues: Array<{
+    category: string;
+    count: number;
+    examples: string[];
+  }>;
+  trendData: Array<{
+    date: string;
+    positive: number;
+    negative: number;
+  }>;
+  responseQualityByTopic: Map<TopicCategory, number>;
+  feedbackByType: Record<string, number>;
+  feedbackByPromptVersion: Record<string, number>;
+  averageRating: number;
+}
+
+export interface GoldStandardResponse {
+  messageId: string;
+  responseText: string;
+  positiveScore: number;
+  successPatterns: string[];
+  promptVersion: string;
+  topicCategory: TopicCategory;
+  extractedElements: {
+    empathyMarkers: string[];
+    helpfulSuggestions: string[];
+    culturalSensitivity: string[];
+    tonalElements: string[];
+  };
+}
+
+export interface PromptVersionAnalytics {
+  version: string;
+  totalResponses: number;
+  averageRating: number;
+  positiveAspectCounts: Record<string, number>;
+  commonSuccessPatterns: string[];
+  improvementAreas: string[];
+}
+
+export interface FeedbackModalProps {
+  messageId: string;
+  messageText: string;
+  onClose: () => void;
+  onSubmit: (feedback: FeedbackData) => void;
+  mode?: 'detailed' | 'positive' | 'negative' | 'quick';
 }
 
 // ============================================================================

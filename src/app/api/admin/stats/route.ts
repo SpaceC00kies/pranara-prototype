@@ -89,10 +89,12 @@ export async function GET(request: NextRequest) {
     // Get database connection
     const db = await getDatabase();
     
-    // Fetch analytics data
-    const [logs, topQuestions] = await Promise.all([
+    // Fetch analytics data including feedback
+    const [logs, topQuestions, feedbackAnalytics, recentFeedback] = await Promise.all([
       db.getAnalyticsLogs(1000, 0, { dateFrom, dateTo: now }),
-      db.getTopQuestions(10)
+      db.getTopQuestions(10),
+      db.getFeedbackAnalytics(),
+      db.getFeedback({ limit: 10, offset: 0 })
     ]);
 
     // Calculate comprehensive statistics
@@ -113,6 +115,8 @@ export async function GET(request: NextRequest) {
       hourlyDistribution: typeof hourlyDistribution;
       dailyTrends: typeof dailyTrends;
       sessionAnalytics: typeof sessionAnalytics;
+      feedbackAnalytics: typeof feedbackAnalytics;
+      recentFeedback: typeof recentFeedback;
     } = {
       period,
       stats,
@@ -124,7 +128,9 @@ export async function GET(request: NextRequest) {
       commonPatterns,
       hourlyDistribution,
       dailyTrends,
-      sessionAnalytics
+      sessionAnalytics,
+      feedbackAnalytics,
+      recentFeedback
     };
 
     // Handle CSV export

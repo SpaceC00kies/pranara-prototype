@@ -9,7 +9,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { LLMProvider, LLMConfig, LLMResponse, LLMError } from '../../types';
 import { retryApiCall } from '../retryService';
 import { conversationHistoryService } from '../conversationHistoryService';
-import { JIRUNG_KNOWLEDGE } from '../../data/jirungKnowledge';
+import { isJirungQuery, injectJirungContextForPrompt } from '../../data/jirungKnowledge';
 
 export interface GeminiDirectConfig {
   model?: string;
@@ -40,7 +40,36 @@ export class GeminiDirectProvider implements LLMProvider {
   }
 
   /**
-   * Get or create chat session with history from conversationHistoryService
+   * Get or create chat session with Jirung context
+   */
+  private getChatSessionWithJirung(sessionId: string) {
+    const model = this.geminiAI.getGenerativeModel({
+      model: this.model,
+      generationConfig: {
+        temperature: 0.7,
+        topP: 0.8,
+        topK: 40,
+        maxOutputTokens: 2048,
+      },
+      systemInstruction: {
+        role: 'system',
+        parts: [{ text: injectJirungContextForPrompt(this.getPranaraSystemInstruction()) }]
+      }
+    });
+
+    // Get conversation history from conversationHistoryService
+    const history = conversationHistoryService.getHistory(sessionId);
+
+    return model.startChat({
+      history: history.map(msg => ({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content }]
+      }))
+    });
+  }
+
+  /**
+   * Get or create chat session with history from conversationHistoryService (without Jirung context)
    */
   private getChatSession(sessionId: string) {
     const model = this.geminiAI.getGenerativeModel({
@@ -87,7 +116,13 @@ export class GeminiDirectProvider implements LLMProvider {
     try {
       // Option 1: Use chat session with history (better for conversation continuity)
       if (sessionId && sessionId !== 'default') {
-        const chat = this.getChatSession(sessionId);
+        // Check if this query needs Jirung context
+        const needsJirungContext = isJirungQuery(prompt);
+
+        const chat = needsJirungContext ?
+          this.getChatSessionWithJirung(sessionId) :
+          this.getChatSession(sessionId);
+
         const result = await chat.sendMessageStream(prompt);
 
         for await (const chunk of result.stream) {
@@ -147,8 +182,13 @@ export class GeminiDirectProvider implements LLMProvider {
     try {
       const response = await retryApiCall(
         async () => {
-          // Get chat session with history from conversationHistoryService
-          const chat = this.getChatSession(sessionId);
+          // Check if this query needs Jirung context
+          const needsJirungContext = isJirungQuery(prompt);
+
+          // Get appropriate chat session
+          const chat = needsJirungContext ?
+            this.getChatSessionWithJirung(sessionId) :
+            this.getChatSession(sessionId);
 
           // Send message through Gemini with system prompt
           const result = await chat.sendMessage(prompt);
@@ -300,45 +340,8 @@ export class GeminiDirectProvider implements LLMProvider {
    * @returns Comprehensive system instruction
    */
   private getPranaraSystemInstruction(): string {
-    // Use cached JIRUNG_KNOWLEDGE import
 
-    const jirungContext = `
-### IMPORTANT CONTEXT:
-You work at ${JIRUNG_KNOWLEDGE.name}, ${JIRUNG_KNOWLEDGE.description}
 
-**Your Workplace Details:**
-- Location: ${JIRUNG_KNOWLEDGE.location.address}, ${JIRUNG_KNOWLEDGE.location.district}, ${JIRUNG_KNOWLEDGE.location.province}
-- Philosophy: ${JIRUNG_KNOWLEDGE.philosophy}
-- Experience: ${JIRUNG_KNOWLEDGE.experience}
-
-**Programs Available:**
-- ${JIRUNG_KNOWLEDGE.programs.flagshipCancerRetreat.title}: ${JIRUNG_KNOWLEDGE.programs.flagshipCancerRetreat.summary}
-- ${JIRUNG_KNOWLEDGE.programs.shortRetreat.title}: ${JIRUNG_KNOWLEDGE.programs.shortRetreat.summary}
-
-**Services You Offer:**
-${JIRUNG_KNOWLEDGE.services.map((service: string) => `- ${service}`).join('\n')}
-
-**Contact Information:**
-- Phone: ${JIRUNG_KNOWLEDGE.contact.phone}
-- LINE: ${JIRUNG_KNOWLEDGE.contact.line}
-- Email: ${JIRUNG_KNOWLEDGE.contact.email}
-- Website: ${JIRUNG_KNOWLEDGE.contact.website}
-
-**Specialties:**
-${JIRUNG_KNOWLEDGE.specialties.map((specialty: string) => `- ${specialty}`).join('\n')}
-
-**When asked about Jirung:**
-- Answer naturally and warmly, not like a brochure
-- Focus on the caring philosophy and approach
-- Don't be overly promotional
-- You can share specific details from the knowledge base above
-- Remember: You are Pranara, a caring wellness companion who works at this center
-- Your primary role is emotional support for caregivers, not marketing
-
-**Important Disclaimers:**
-- ${JIRUNG_KNOWLEDGE.disclaimers.nonMedical}
-- ${JIRUNG_KNOWLEDGE.disclaimers.safety}
-`;
     return `Role:
 You are Pranara (ปราณารา), a warm and empathetic AI wellness companion. Your core purpose is to provide gentle emotional support, validate feelings, and suggest a single, practical, and specific next step. You are an expert at creating a safe space for dialogue.
 
@@ -408,7 +411,7 @@ Example 6: Dealing with Insecurities (Simple Response)
 User: รู้สึกว่าตัวเองไม่เก่งเท่าคนอื่นเลย
 Pranara: การเปรียบเทียบตัวเองกับคนอื่นบางครั้งก็ทำให้เราเหนื่อยใจได้เหมือนกันนะคะ ลองให้คุณค่ากับสิ่งเล็กๆ น้อยๆ ที่คุณทำได้ดีในแต่ละวันดูไหมคะ มีเรื่องอะไรที่ทำให้คุณรู้สึกภาคภูมิใจในตัวเองบ้างคะ
 
-${jirungContext}`;
+`;
   }
 
 

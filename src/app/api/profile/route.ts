@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { 
-  createOrUpdateUserProfile, 
+import {
+  createOrUpdateUserProfile,
   getUserProfile,
-  initializeUserProfileSchema 
+  initializeUserProfileSchema
 } from '@/services/userProfileService';
 import { UserProfileRequest } from '@/types';
 
-// Initialize schema on startup
-initializeUserProfileSchema().catch(console.error);
+// Schema initialization is handled by the database service
 
 /**
  * GET /api/profile - Get user profile by session ID
@@ -25,7 +24,7 @@ export async function GET(request: NextRequest) {
     }
 
     const profile = await getUserProfile(sessionId);
-    
+
     return NextResponse.json({
       success: true,
       profile,
@@ -35,7 +34,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error getting user profile:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to get user profile',
         success: false,
         timestamp: new Date()
@@ -50,10 +49,28 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json() as UserProfileRequest;
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseError) {
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
+
+    // Validate that body exists and has required structure
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json(
+        { error: 'Invalid request body' },
+        { status: 400 }
+      );
+    }
+
+    const profileRequest = body as UserProfileRequest;
 
     // Validate required fields
-    if (!body.sessionId) {
+    if (!profileRequest.sessionId) {
       return NextResponse.json(
         { error: 'Session ID is required' },
         { status: 400 }
@@ -61,7 +78,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate age range
-    if (body.ageRange && !['18-29', '30-39', '40-49', '50-59', '60-69', '70-79', '80+'].includes(body.ageRange)) {
+    if (profileRequest.ageRange && !['18-29', '30-39', '40-49', '50-59', '60-69', '70-79', '80+'].includes(profileRequest.ageRange)) {
       return NextResponse.json(
         { error: 'Invalid age range' },
         { status: 400 }
@@ -69,7 +86,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate gender
-    if (body.gender && !['male', 'female', 'transgender', 'non-binary', 'prefer-not-to-say'].includes(body.gender)) {
+    if (profileRequest.gender && !['male', 'female', 'transgender', 'non-binary', 'prefer-not-to-say'].includes(profileRequest.gender)) {
       return NextResponse.json(
         { error: 'Invalid gender' },
         { status: 400 }
@@ -77,7 +94,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate location
-    if (body.location && !['bangkok', 'central', 'north', 'northeast', 'south', 'other'].includes(body.location)) {
+    if (profileRequest.location && !['bangkok', 'central', 'north', 'northeast', 'south', 'other'].includes(profileRequest.location)) {
       return NextResponse.json(
         { error: 'Invalid location' },
         { status: 400 }
@@ -85,7 +102,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create or update profile
-    const result = await createOrUpdateUserProfile(body);
+    const result = await createOrUpdateUserProfile(profileRequest);
 
     return NextResponse.json({
       success: true,
@@ -97,7 +114,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating/updating user profile:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to save user profile',
         success: false,
         timestamp: new Date()
@@ -112,9 +129,27 @@ export async function POST(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
-    const body = await request.json() as Partial<UserProfileRequest> & { sessionId: string };
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseError) {
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
 
-    if (!body.sessionId) {
+    // Validate that body exists and has required structure
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json(
+        { error: 'Invalid request body' },
+        { status: 400 }
+      );
+    }
+
+    const updateRequest = body as Partial<UserProfileRequest> & { sessionId: string };
+
+    if (!updateRequest.sessionId) {
       return NextResponse.json(
         { error: 'Session ID is required' },
         { status: 400 }
@@ -122,7 +157,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Get existing profile
-    const existingProfile = await getUserProfile(body.sessionId);
+    const existingProfile = await getUserProfile(updateRequest.sessionId);
     if (!existingProfile) {
       return NextResponse.json(
         { error: 'Profile not found' },
@@ -131,23 +166,23 @@ export async function PUT(request: NextRequest) {
     }
 
     // Merge with existing data
-    const updateRequest: UserProfileRequest = {
-      sessionId: body.sessionId,
-      ageRange: body.ageRange || existingProfile.ageRange,
-      gender: body.gender || existingProfile.gender,
-      location: body.location || existingProfile.location,
+    const mergedRequest: UserProfileRequest = {
+      sessionId: updateRequest.sessionId,
+      ageRange: updateRequest.ageRange || existingProfile.ageRange,
+      gender: updateRequest.gender || existingProfile.gender,
+      location: updateRequest.location || existingProfile.location,
       culturalContext: {
         language: existingProfile.culturalContext?.language || 'th',
         ...existingProfile.culturalContext,
-        ...body.culturalContext
+        ...updateRequest.culturalContext
       },
       healthContext: {
         ...existingProfile.healthContext,
-        ...body.healthContext
+        ...updateRequest.healthContext
       }
     };
 
-    const result = await createOrUpdateUserProfile(updateRequest);
+    const result = await createOrUpdateUserProfile(mergedRequest);
 
     return NextResponse.json({
       success: true,
@@ -159,7 +194,7 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     console.error('Error updating user profile:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to update user profile',
         success: false,
         timestamp: new Date()
@@ -197,7 +232,7 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     console.error('Error deleting user profile:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to delete user profile',
         success: false,
         timestamp: new Date()

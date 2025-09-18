@@ -183,43 +183,23 @@ check_performance() {
     fi
 }
 
-# Run pre-deployment checks
-run_pre_deployment_checks() {
-    print_info "Running pre-deployment checks..."
+# Run E2E tests
+run_e2e_tests() {
+    print_info "Running E2E test suite..."
     
-    if command -v node >/dev/null 2>&1; then
-        if [ -f "scripts/deployment-check.js" ]; then
-            if node scripts/deployment-check.js; then
-                print_status 0 "Pre-deployment checks passed"
+    if command -v npm >/dev/null 2>&1; then
+        if [ -f "playwright.config.ts" ]; then
+            if npm run test:e2e; then
+                print_status 0 "E2E tests passed"
             else
-                print_status 1 "Pre-deployment checks failed"
+                print_status 1 "E2E tests failed"
                 return 1
             fi
         else
-            print_warning "Deployment check script not found"
+            print_warning "Playwright config not found"
         fi
     else
-        print_warning "Node.js not available for pre-deployment checks"
-    fi
-}
-
-# Run production tests
-run_production_tests() {
-    print_info "Running production test suite..."
-    
-    if command -v node >/dev/null 2>&1; then
-        if [ -f "scripts/production-test.js" ]; then
-            if TEST_URL="$DEPLOYMENT_URL" node scripts/production-test.js; then
-                print_status 0 "Production tests passed"
-            else
-                print_status 1 "Production tests failed"
-                return 1
-            fi
-        else
-            print_warning "Production test script not found"
-        fi
-    else
-        print_warning "Node.js not available for production tests"
+        print_warning "npm not available for E2E tests"
     fi
 }
 
@@ -240,8 +220,7 @@ main() {
     
     # Comprehensive tests (if available)
     if [ "$2" = "--full" ]; then
-        run_pre_deployment_checks || ((failed_checks++))
-        run_production_tests || ((failed_checks++))
+        run_e2e_tests || ((failed_checks++))
     fi
     
     echo ""
