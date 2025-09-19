@@ -229,19 +229,16 @@ export class AIService {
 
       // Update model instruction if needed
       if (model && this.config.llmProvider && 'updateModelInstruction' in this.config.llmProvider) {
-        console.log(`🎯 AIService: Requesting model switch to ${model.toUpperCase()}`);
-        
-        // Check current model type before update
+        // Check current model type before logging or switching
         const currentType = 'getCurrentModelType' in this.config.llmProvider 
           ? (this.config.llmProvider as any).getCurrentModelType()
           : 'unknown';
         
         if (currentType !== model) {
-          console.log(`🔄 AIService: Switching from ${currentType.toUpperCase()} to ${model.toUpperCase()}`);
+          console.log(`🎯 AIService: Switching from ${currentType.toUpperCase()} to ${model.toUpperCase()}`);
           (this.config.llmProvider as any).updateModelInstruction(model);
-        } else {
-          console.log(`✅ AIService: Already using ${model.toUpperCase()}, no switch needed`);
         }
+        // Removed the "already using" log to reduce noise - only log actual switches
       } else if (model) {
         console.log(`⚠️ AIService: Model parameter ${model} provided but provider doesn't support updateModelInstruction`);
       }
