@@ -55,20 +55,7 @@ export default function Home() {
     console.log('🔑 Pranara session ID established:', sid);
   }, []); // Empty dependency array means this runs only once on mount
 
-  // Prevent auto-focus on mobile Chrome (causes unwanted keyboard popup)
-  useEffect(() => {
-    // Only focus on desktop, not on mobile devices
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    const isChrome = /Chrome/i.test(navigator.userAgent);
 
-    // Don't auto-focus on mobile Chrome as it causes unwanted keyboard popup
-    if (!isMobile || !isChrome) {
-      // Small delay to ensure the page is fully loaded
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 100);
-    }
-  }, []);
 
 
 
