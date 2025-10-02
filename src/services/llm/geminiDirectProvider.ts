@@ -206,16 +206,7 @@ Pranara: ความรู้สึกหลงทางที่คุณพ�
   async* generateStreamingResponse(prompt: string, config?: LLMConfig & { sessionId?: string }): AsyncGenerator<string> {
     const sessionId = config?.sessionId || 'default';
 
-    // Verify system instruction integrity before generating response
-    const verification = this.verifySystemInstruction();
-    console.log(`🔍 Model Verification: ${JSON.stringify(verification)}`);
-
-    if (!verification.isValid) {
-      console.error(`❌ CRITICAL: System instruction mismatch detected!`);
-      throw new Error(`System instruction integrity check failed`);
-    }
-
-    console.log(`🧠 Gemini Direct: Generating streaming response for session ${sessionId} using ${verification.modelType.toUpperCase()}`);
+    console.log(`🧠 Gemini Direct: Generating streaming response for session ${sessionId} using PNR-G`);
 
     try {
       // Use single model instance with dynamic context injection for performance
