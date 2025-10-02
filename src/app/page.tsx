@@ -421,32 +421,32 @@ export default function Home() {
     // Initial landing page - Claude-style centered input
     return (
       <div className="min-h-dvh bg-primary-100 flex flex-col">
-        {/* Header with Auth Buttons */}
-        <div className="flex-shrink-0 px-6 py-4">
+        {/* Responsive Header with Auth Buttons */}
+        <div className="flex-shrink-0 px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex justify-end max-w-4xl mx-auto">
             {!authLoading && (
               <>
                 {isAuthenticated ? (
-                  <div className="flex items-center space-x-4">
-                    <span className="text-sm text-gray-600" style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}>
+                  <div className="flex items-center space-x-2 sm:space-x-4">
+                    <span className="text-xs sm:text-sm text-gray-600 truncate max-w-24 sm:max-w-none" style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}>
                       สวัสดี, {user?.display_name}
                     </span>
                     <button
                       onClick={logout}
-                      className="text-sm text-gray-500 hover:text-teal-600 transition-colors focus:outline-none"
+                      className="text-xs sm:text-sm text-gray-500 hover:text-teal-600 transition-colors focus:outline-none"
                       style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
                     >
                       ออกจากระบบ
                     </button>
                   </div>
                 ) : (
-                  <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2 sm:space-x-4">
                     <button
                       onClick={() => {
                         setAuthMode('login');
                         setShowAuthModal(true);
                       }}
-                      className="text-sm text-gray-600 hover:text-teal-600 transition-colors focus:outline-none"
+                      className="text-xs sm:text-sm text-gray-600 hover:text-teal-600 transition-colors focus:outline-none"
                       style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
                     >
                       เข้าสู่ระบบ
@@ -456,7 +456,7 @@ export default function Home() {
                         setAuthMode('register');
                         setShowAuthModal(true);
                       }}
-                      className="text-sm text-gray-600 hover:text-teal-600 transition-colors focus:outline-none"
+                      className="text-xs sm:text-sm text-gray-600 hover:text-teal-600 transition-colors focus:outline-none"
                       style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
                     >
                       สมัครสมาชิก
@@ -636,44 +636,78 @@ export default function Home() {
   // Chat interface after first message
   return (
     <div className="min-h-dvh bg-primary-100 flex flex-col">
-      {/* Compact Header */}
-      <div className="flex-shrink-0 border-b border-primary-200 px-6 py-4">
-        <div className="flex items-center justify-between max-w-4xl mx-auto">
-          {/* Logo and Session Info */}
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => {
-                setMessages([]);
-                setHasStartedChat(false);
-                setInputValue('');
-              }}
-              className="flex items-center space-x-1 hover:opacity-80 transition-opacity focus:outline-none"
-            >
-              <img
-                src="/Logo.png"
-                alt="Pranara Logo"
-                className="w-8 h-8"
-              />
-              <div>
-                <h1 className="text-lg font-semibold text-primary-300" style={{ fontFamily: 'Boska, ui-serif, Georgia, serif' }}>
+      {/* Responsive Header */}
+      <div className="flex-shrink-0 border-b border-primary-200 px-4 sm:px-6 py-3 sm:py-4">
+        <div className="max-w-4xl mx-auto">
+          {/* Mobile Layout: Stack vertically */}
+          <div className="flex flex-col space-y-3 sm:hidden">
+            {/* Top Row: Logo and User Menu */}
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => {
+                  setMessages([]);
+                  setHasStartedChat(false);
+                  setInputValue('');
+                }}
+                className="flex items-center space-x-2 hover:opacity-80 transition-opacity focus:outline-none"
+              >
+                <img
+                  src="/Logo.png"
+                  alt="Pranara Logo"
+                  className="w-7 h-7"
+                />
+                <h1 className="text-base font-semibold text-primary-300" style={{ fontFamily: 'Boska, ui-serif, Georgia, serif' }}>
                   Pranara
                 </h1>
-              </div>
-            </button>
+              </button>
+              
+              {/* Mobile User Menu */}
+              {!authLoading && (
+                <>
+                  {isAuthenticated ? (
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs text-gray-600 truncate max-w-20" style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}>
+                        {user?.display_name}
+                      </span>
+                      <button
+                        onClick={logout}
+                        className="text-xs text-gray-500 hover:text-teal-600 transition-colors focus:outline-none"
+                        style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
+                      >
+                        ออก
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => {
+                          setAuthMode('login');
+                          setShowAuthModal(true);
+                        }}
+                        className="text-xs text-gray-600 hover:text-teal-600 transition-colors focus:outline-none"
+                        style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
+                      >
+                        เข้าสู่ระบบ
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
             
-            {/* Session Management for Authenticated Users */}
+            {/* Bottom Row: Session Management */}
             {isAuthenticated && (
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center justify-between">
                 {/* Current Session Display & Menu */}
                 {chatSessions.length > 0 && (
-                  <div className="relative">
+                  <div className="relative flex-1 mr-2">
                     <button
                       onClick={() => setShowSessionMenu(!showSessionMenu)}
-                      className="session-trigger flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-400 rounded px-3 py-1 transition-colors focus:outline-none focus:ring-0 focus:border-gray-400"
+                      className="session-trigger flex items-center justify-between w-full text-xs text-gray-600 hover:text-gray-800 border border-gray-400 rounded px-2 py-1 transition-colors focus:outline-none focus:ring-0 focus:border-gray-400"
                       style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
                     >
-                      <span>{chatSessions.find(s => s.id === currentSessionId)?.title || 'New Chat'}</span>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <span className="truncate">{chatSessions.find(s => s.id === currentSessionId)?.title || 'New Chat'}</span>
+                      <svg className="w-3 h-3 ml-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
                     </button>
@@ -817,69 +851,134 @@ export default function Home() {
                   </div>
                 )}
                 
-                {/* New Chat Button */}
+                {/* Mobile New Chat Button */}
                 {chatSessions.length < 3 && (
                   <button
                     onClick={handleNewChat}
-                    className="text-sm bg-teal-600 hover:bg-teal-700 text-white px-3 py-1 rounded transition-colors focus:outline-none"
+                    className="text-xs bg-teal-600 hover:bg-teal-700 text-white px-2 py-1 rounded transition-colors focus:outline-none flex-shrink-0"
                     style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
                   >
-                    + แชทใหม่
+                    + ใหม่
                   </button>
                 )}
                 
-                {/* Session Limit Indicator */}
+                {/* Mobile Session Limit Indicator */}
                 {chatSessions.length >= 3 && (
-                  <span className="text-xs text-gray-400" style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}>
-                    (สูงสุด 3 แชท)
+                  <span className="text-xs text-gray-400 flex-shrink-0" style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}>
+                    (สูงสุด 3)
                   </span>
                 )}
               </div>
             )}
           </div>
-
-          {/* User Menu */}
-          {!authLoading && (
-            <>
-              {isAuthenticated ? (
-                <div className="flex items-center space-x-4">
-                  <span className="text-sm text-gray-600" style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}>
-                    {user?.display_name}
-                  </span>
-                  <button
-                    onClick={logout}
-                    className="text-sm text-gray-500 hover:text-teal-600 transition-colors focus:outline-none"
-                    style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
-                  >
-                    ออกจากระบบ
-                  </button>
+          
+          {/* Desktop Layout: Single row */}
+          <div className="hidden sm:flex items-center justify-between">
+            {/* Logo and Session Info */}
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => {
+                  setMessages([]);
+                  setHasStartedChat(false);
+                  setInputValue('');
+                }}
+                className="flex items-center space-x-1 hover:opacity-80 transition-opacity focus:outline-none"
+              >
+                <img
+                  src="/Logo.png"
+                  alt="Pranara Logo"
+                  className="w-8 h-8"
+                />
+                <div>
+                  <h1 className="text-lg font-semibold text-primary-300" style={{ fontFamily: 'Boska, ui-serif, Georgia, serif' }}>
+                    Pranara
+                  </h1>
                 </div>
-              ) : (
-                <div className="flex items-center space-x-4">
-                  <button
-                    onClick={() => {
-                      setAuthMode('login');
-                      setShowAuthModal(true);
-                    }}
-                    className="text-sm text-gray-600 hover:text-teal-600 transition-colors focus:outline-none"
-                    style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
-                  >
-                    เข้าสู่ระบบ
-                  </button>
-                  <button
-                    onClick={() => {
-                      setAuthMode('register');
-                      setShowAuthModal(true);
-                    }}
-                    className="text-sm text-gray-600 hover:text-teal-600 transition-colors focus:outline-none"
-                    style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
-                  >
-                    สมัครสมาชิก
-                  </button>
+              </button>
+              
+              {/* Desktop Session Management for Authenticated Users */}
+              {isAuthenticated && (
+                <div className="flex items-center space-x-3">
+                  {/* Current Session Display & Menu */}
+                  {chatSessions.length > 0 && (
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowSessionMenu(!showSessionMenu)}
+                        className="session-trigger flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-400 rounded px-3 py-1 transition-colors focus:outline-none focus:ring-0 focus:border-gray-400"
+                        style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
+                      >
+                        <span>{chatSessions.find(s => s.id === currentSessionId)?.title || 'New Chat'}</span>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                  
+                  {/* Desktop New Chat Button */}
+                  {chatSessions.length < 3 && (
+                    <button
+                      onClick={handleNewChat}
+                      className="text-sm bg-teal-600 hover:bg-teal-700 text-white px-3 py-1 rounded transition-colors focus:outline-none"
+                      style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
+                    >
+                      + แชทใหม่
+                    </button>
+                  )}
+                  
+                  {/* Desktop Session Limit Indicator */}
+                  {chatSessions.length >= 3 && (
+                    <span className="text-xs text-gray-400" style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}>
+                      (สูงสุด 3 แชท)
+                    </span>
+                  )}
                 </div>
               )}
-            </>
-          )}
+            </div>
+
+            {/* Desktop User Menu */}
+            {!authLoading && (
+              <>
+                {isAuthenticated ? (
+                  <div className="flex items-center space-x-4">
+                    <span className="text-sm text-gray-600" style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}>
+                      {user?.display_name}
+                    </span>
+                    <button
+                      onClick={logout}
+                      className="text-sm text-gray-500 hover:text-teal-600 transition-colors focus:outline-none"
+                      style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
+                    >
+                      ออกจากระบบ
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-4">
+                    <button
+                      onClick={() => {
+                        setAuthMode('login');
+                        setShowAuthModal(true);
+                      }}
+                      className="text-sm text-gray-600 hover:text-teal-600 transition-colors focus:outline-none"
+                      style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
+                    >
+                      เข้าสู่ระบบ
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAuthMode('register');
+                        setShowAuthModal(true);
+                      }}
+                      className="text-sm text-gray-600 hover:text-teal-600 transition-colors focus:outline-none"
+                      style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
+                    >
+                      สมัครสมาชิก
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
 
