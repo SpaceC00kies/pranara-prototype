@@ -16,11 +16,21 @@ import { AIService, createAIService } from '../../../services/llm/aiService';
 import { GeminiDirectProvider } from '../../../services/llm/geminiDirectProvider';
 import { getDatabase } from '../../../services/databaseService';
 import { createAnalyticsEvent } from '../../../services/analyticsService';
-import {
-  generateSessionId,
-  isValidSessionId,
-  detectLanguage
-} from '../../../services/sessionService';
+// Utility functions for session management
+function generateSessionId(): string {
+  return crypto.randomUUID();
+}
+
+function isValidSessionId(sessionId: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(sessionId);
+}
+
+function detectLanguage(message: string): string {
+  // Simple Thai language detection
+  const thaiRegex = /[\u0E00-\u0E7F]/;
+  return thaiRegex.test(message) ? 'th' : 'en';
+}
 import {
   classifyTopic as classifyJirungTopic
 } from '../../../data/jirungKnowledge';
@@ -35,6 +45,12 @@ import {
   conversationHistoryService,
   createChatMessage
 } from '../../../services/conversationHistoryService';
+import { authenticateRequest } from '../../../services/authService';
+import { 
+  addChatMessage, 
+  validateSessionOwnership,
+  getOrCreateDefaultSession 
+} from '../../../services/sessionService';
 
 // Initialize AI service and fallback service
 let aiService: AIService | null = null;
@@ -70,15 +86,43 @@ export async function POST(request: NextRequest) {
 
     const { message, sessionId, mode = 'conversation', model } = body;
 
-    // Simplified session validation - trust the client to send a valid UUID
-    if (!sessionId || !isValidSessionId(sessionId)) {
-      return NextResponse.json(
-        createErrorResponse('INVALID_INPUT', 'A valid session ID is required.'),
-        { status: 400 }
-      );
-    }
+    // Check if user is authenticated
+    const user = await authenticateRequest(request.headers);
+    let validSessionId = sessionId;
 
-    const validSessionId = sessionId;
+    if (user) {
+      // Authenticated user - handle persistent sessions
+      if (sessionId) {
+        // Validate session ownership
+        const isOwner = await validateSessionOwnership(sessionId, user.id);
+        if (!isOwner) {
+          return NextResponse.json(
+            createErrorResponse('INVALID_INPUT', 'Session not found or access denied'),
+            { status: 403 }
+          );
+        }
+        validSessionId = sessionId;
+      } else {
+        // No session provided - get or create default session
+        const defaultSession = await getOrCreateDefaultSession(user.id);
+        if (!defaultSession) {
+          return NextResponse.json(
+            createErrorResponse('DATABASE_ERROR', 'Failed to create session'),
+            { status: 500 }
+          );
+        }
+        validSessionId = defaultSession.id;
+      }
+    } else {
+      // Anonymous user - use simple session validation
+      if (!sessionId || !isValidSessionId(sessionId)) {
+        return NextResponse.json(
+          createErrorResponse('INVALID_INPUT', 'A valid session ID is required.'),
+          { status: 400 }
+        );
+      }
+      validSessionId = sessionId;
+    }
 
     // Detect language
     const language = detectLanguage(message);
@@ -90,6 +134,16 @@ export async function POST(request: NextRequest) {
     const userMessage = createChatMessage(message, 'user', classifyJirungTopic(message) as TopicCategory);
     conversationHistoryService.addMessage(validSessionId, userMessage);
 
+    // For authenticated users, also persist to database
+    if (user) {
+      try {
+        await addChatMessage(validSessionId, user.id, message, 'user', classifyJirungTopic(message));
+      } catch (error) {
+        console.error('Failed to persist user message:', error);
+        // Continue with response - don't fail the chat
+      }
+    }
+
     // Get conversation context for repetition detection
     const conversationContext = conversationHistoryService.getConversationContext(validSessionId);
 
@@ -99,6 +153,8 @@ export async function POST(request: NextRequest) {
 
     // Create streaming response
     const encoder = new TextEncoder();
+    let fullResponse = '';
+    
     const stream = new ReadableStream({
       async start(controller) {
         try {
@@ -106,8 +162,19 @@ export async function POST(request: NextRequest) {
 
           // Generate streaming response
           for await (const chunk of ai.processMessageStream(enhancedMessage, validSessionId, language, mode, model)) {
+            fullResponse += chunk;
             const data = JSON.stringify({ chunk }) + '\n';
             controller.enqueue(encoder.encode(data));
+          }
+
+          // For authenticated users, persist AI response to database
+          if (user && fullResponse.trim()) {
+            try {
+              await addChatMessage(validSessionId, user.id, fullResponse, 'assistant', classifyJirungTopic(message));
+            } catch (error) {
+              console.error('Failed to persist AI response:', error);
+              // Don't fail the stream - response was already sent
+            }
           }
 
           controller.close();
@@ -116,6 +183,17 @@ export async function POST(request: NextRequest) {
 
           // Send fallback response
           const fallbackResponse = 'ขออภัยค่ะ เกิดข้อผิดพลาดในการตอบกลับ กรุณาลองใหม่อีกครั้งค่ะ';
+          fullResponse = fallbackResponse;
+          
+          // For authenticated users, persist fallback response
+          if (user) {
+            try {
+              await addChatMessage(validSessionId, user.id, fallbackResponse, 'assistant');
+            } catch (error) {
+              console.error('Failed to persist fallback response:', error);
+            }
+          }
+          
           const data = JSON.stringify({ chunk: fallbackResponse }) + '\n';
           controller.enqueue(encoder.encode(data));
           controller.close();

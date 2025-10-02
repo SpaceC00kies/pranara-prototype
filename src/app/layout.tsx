@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { Prompt, Sarabun, Space_Mono } from "next/font/google";
+import { Prompt, Sarabun, Space_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import ErrorBoundary from "@/components/error/ErrorBoundary";
 import PerformanceTracker from "@/components/PerformanceTracker";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 // Optimized Thai font loading with preload and fallbacks
 const prompt = Prompt({
@@ -31,6 +32,17 @@ const spaceMono = Space_Mono({
   weight: ["400", "700"],
   display: "swap",
   preload: true,
+});
+
+// Modern Thai font (Inter for Latin, system fonts for Thai)
+const inter = Inter({
+  variable: "--font-sukhumvit",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
+  preload: true,
+  fallback: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+  adjustFontFallback: true,
 });
 
 export const metadata: Metadata = {
@@ -76,6 +88,8 @@ export default function RootLayout({
         {/* Preconnect to Google Fonts for faster loading */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        
+
 
         {/* DNS prefetch for external services */}
         <link rel="dns-prefetch" href="https://generativelanguage.googleapis.com" />
@@ -91,6 +105,8 @@ export default function RootLayout({
               unicode-range: U+0E00-0E7F; /* Thai Unicode range */
             }
             
+
+            
             /* Reduce layout shift during font loading */
             .font-prompt {
               font-family: var(--font-prompt), 'Prompt-fallback', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
@@ -103,6 +119,12 @@ export default function RootLayout({
             .font-space-mono {
               font-family: var(--font-space-mono), 'Courier New', monospace;
             }
+            
+            .font-sukhumvit {
+              font-family: var(--font-sukhumvit), 'SF Pro Display', 'SF Pro Text', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            }
+            
+
             
             /* Mobile performance optimizations */
             * {
@@ -210,11 +232,13 @@ export default function RootLayout({
         }} />
       </head>
       <body
-        className={`${prompt.variable} ${sarabun.variable} ${spaceMono.variable} font-prompt antialiased bg-white text-gray-900`}
+        className={`${prompt.variable} ${sarabun.variable} ${spaceMono.variable} ${inter.variable} font-prompt antialiased bg-white text-gray-900`}
       >
-        <ErrorBoundary>
-          {children}
-        </ErrorBoundary>
+        <AuthProvider>
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
+        </AuthProvider>
         <PerformanceTracker />
       </body>
     </html>

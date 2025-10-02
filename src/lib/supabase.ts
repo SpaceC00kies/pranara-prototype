@@ -24,6 +24,75 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey ||
 export interface Database {
   public: {
     Tables: {
+      users: {
+        Row: {
+          id: string;
+          username: string;
+          password_hash: string;
+          display_name: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          username: string;
+          password_hash: string;
+          display_name: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          username?: string;
+          password_hash?: string;
+          display_name?: string;
+          created_at?: string;
+        };
+      };
+      chat_sessions: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          title?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      chat_messages: {
+        Row: {
+          id: string;
+          session_id: string;
+          content: string;
+          sender: string;
+          timestamp: string;
+        };
+        Insert: {
+          id?: string;
+          session_id: string;
+          content: string;
+          sender: string;
+          timestamp?: string;
+        };
+        Update: {
+          id?: string;
+          session_id?: string;
+          content?: string;
+          sender?: string;
+          timestamp?: string;
+        };
+      };
       question_logs: {
         Row: {
           id: number;
