@@ -78,6 +78,9 @@ const config: Config = {
         // Keep existing Thai fonts
         prompt: ['Prompt', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
         sarabun: ['Sarabun', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        
+        // Add IBM Plex Sans Thai - Local font
+        'ibm-plex-thai': ['IBM Plex Sans Thai', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
 
         // Add Google fonts
         'space-mono': ['var(--font-space-mono)', 'monospace'],

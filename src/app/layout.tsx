@@ -124,6 +124,10 @@ export default function RootLayout({
               font-family: var(--font-sukhumvit), 'SF Pro Display', 'SF Pro Text', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
             }
             
+            .font-ibm-plex-thai {
+              font-family: 'IBM Plex Sans Thai', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            }
+            
 
             
             /* Mobile performance optimizations */
