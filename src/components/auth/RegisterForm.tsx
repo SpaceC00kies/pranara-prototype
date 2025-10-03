@@ -7,6 +7,9 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface RegisterFormProps {
   onSuccess?: () => void;
@@ -118,17 +121,16 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin, onClose }: Re
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Username Field */}
         <div>
-          <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1" style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}>
+          <Label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1" style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}>
             ชื่อผู้ใช้
-          </label>
-          <input
+          </Label>
+          <Input
             type="text"
             id="username"
             name="username"
             value={formData.username}
             onChange={handleChange}
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-300 focus:bg-white transition-colors font-sarabun"
-
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-300 focus:bg-white focus:ring-0 focus-visible:ring-0 transition-colors font-sarabun"
             disabled={isLoading}
             autoComplete="username"
           />
@@ -136,17 +138,16 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin, onClose }: Re
 
         {/* Display Name Field */}
         <div>
-          <label htmlFor="displayName" className="block text-sm font-medium text-gray-700 mb-1" style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}>
+          <Label htmlFor="displayName" className="block text-sm font-medium text-gray-700 mb-1" style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}>
             ชื่อที่แสดง
-          </label>
-          <input
+          </Label>
+          <Input
             type="text"
             id="displayName"
             name="displayName"
             value={formData.displayName}
             onChange={handleChange}
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-300 focus:bg-white transition-colors font-sarabun"
-
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-300 focus:bg-white focus:ring-0 focus-visible:ring-0 transition-colors font-sarabun"
             disabled={isLoading}
             autoComplete="name"
           />
@@ -154,17 +155,16 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin, onClose }: Re
 
         {/* Password Field */}
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1" style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}>
+          <Label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1" style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}>
             รหัสผ่าน
-          </label>
-          <input
+          </Label>
+          <Input
             type="password"
             id="password"
             name="password"
             value={formData.password}
             onChange={handleChange}
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-300 focus:bg-white transition-colors font-sarabun"
-
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-300 focus:bg-white focus:ring-0 focus-visible:ring-0 transition-colors font-sarabun"
             disabled={isLoading}
             autoComplete="new-password"
           />
@@ -172,17 +172,16 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin, onClose }: Re
 
         {/* Confirm Password Field */}
         <div>
-          <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1" style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}>
+          <Label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1" style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}>
             ยืนยันรหัสผ่าน
-          </label>
-          <input
+          </Label>
+          <Input
             type="password"
             id="confirmPassword"
             name="confirmPassword"
             value={formData.confirmPassword}
             onChange={handleChange}
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-300 focus:bg-white transition-colors font-sarabun"
-
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-300 focus:bg-white focus:ring-0 focus-visible:ring-0 transition-colors font-sarabun"
             disabled={isLoading}
             autoComplete="new-password"
           />
@@ -192,10 +191,10 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin, onClose }: Re
         </div>
 
         {/* Submit Button */}
-        <button
+        <Button
           type="submit"
           disabled={isLoading || !isFormValid()}
-          className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors focus:outline-none"
+          className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors"
           style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
         >
           {isLoading ? (
@@ -206,37 +205,40 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin, onClose }: Re
           ) : (
             'สมัครสมาชิก'
           )}
-        </button>
+        </Button>
       </form>
 
       {/* Footer */}
       <div className="mt-6 text-center">
         <p className="text-gray-600 text-sm" style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}>
           มีบัญชีอยู่แล้ว?{' '}
-          <button
+          <Button
             type="button"
             onClick={onSwitchToLogin}
-            className="text-teal-600 hover:text-teal-700 font-medium hover:underline focus:outline-none"
+            variant="link"
+            className="text-teal-600 hover:text-teal-700 font-medium hover:underline p-0 h-auto"
             style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
             disabled={isLoading}
           >
             เข้าสู่ระบบ
-          </button>
+          </Button>
         </p>
       </div>
 
       {/* Close Button */}
       {onClose && (
-        <button
+        <Button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none"
+          variant="ghost"
+          size="sm"
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors h-auto w-auto p-1"
           disabled={isLoading}
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
-        </button>
+        </Button>
       )}
     </div>
   );

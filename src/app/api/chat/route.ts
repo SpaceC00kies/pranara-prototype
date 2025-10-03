@@ -22,8 +22,15 @@ function generateSessionId(): string {
 }
 
 function isValidSessionId(sessionId: string): boolean {
+  if (!sessionId || typeof sessionId !== 'string') {
+    return false;
+  }
+  
+  // Check if it's a UUID format (for authenticated users) or 64-char hex (for anonymous users)
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(sessionId);
+  const hexRegex = /^[a-f0-9]{64}$/i;
+  
+  return uuidRegex.test(sessionId) || hexRegex.test(sessionId);
 }
 
 function detectLanguage(message: string): string {
@@ -116,6 +123,11 @@ export async function POST(request: NextRequest) {
     } else {
       // Anonymous user - use simple session validation
       if (!sessionId || !isValidSessionId(sessionId)) {
+        console.error('❌ Invalid session ID for anonymous user:', {
+          sessionId: sessionId ? `${sessionId.substring(0, 8)}...` : 'null',
+          length: sessionId?.length,
+          isString: typeof sessionId === 'string'
+        });
         return NextResponse.json(
           createErrorResponse('INVALID_INPUT', 'A valid session ID is required.'),
           { status: 400 }

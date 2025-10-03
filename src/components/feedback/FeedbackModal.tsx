@@ -197,7 +197,7 @@ export default function FeedbackModal({
                 <select
                   value={feedbackType}
                   onChange={(e) => setFeedbackType(e.target.value as any)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 font-sarabun focus:outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 font-sarabun focus:outline-none focus:border-gray-500 focus:ring-0"
                   required
                 >
                   <option value="">เลือกประเภทความคิดเห็น</option>
@@ -221,7 +221,7 @@ export default function FeedbackModal({
                   <select
                     value={emotionalTone}
                     onChange={(e) => setEmotionalTone(e.target.value as any)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 font-sarabun focus:outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 font-sarabun focus:outline-none focus:border-gray-500 focus:ring-0"
                   >
                     <option value="">เลือกน้ำเสียง</option>
                     <option value="too-formal">เป็นทางการเกินไป</option>
@@ -238,7 +238,7 @@ export default function FeedbackModal({
                   <select
                     value={responseLength}
                     onChange={(e) => setResponseLength(e.target.value as any)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 font-sarabun focus:outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 font-sarabun focus:outline-none focus:border-gray-500 focus:ring-0"
                   >
                     <option value="">เลือกความยาว</option>
                     <option value="too-short">สั้นเกินไป</option>
@@ -255,7 +255,7 @@ export default function FeedbackModal({
                   <select
                     value={culturalSensitivity}
                     onChange={(e) => setCulturalSensitivity(e.target.value as any)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 font-sarabun focus:outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 font-sarabun focus:outline-none focus:border-gray-500 focus:ring-0"
                   >
                     <option value="">เลือกความเหมาะสม</option>
                     <option value="appropriate">เหมาะสมและละเอียดอ่อน</option>
@@ -277,7 +277,7 @@ export default function FeedbackModal({
                   value={selectedText}
                   onChange={(e) => setSelectedText(e.target.value)}
                   placeholder="เลือกส่วนเฉพาะของคำตอบ"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 font-sarabun focus:outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 font-sarabun focus:outline-none focus:border-gray-500 focus:ring-0"
                 />
               </div>
             )}
@@ -299,7 +299,7 @@ export default function FeedbackModal({
                       : "กรุณาแบ่งปันความคิดเห็นว่าปราณารา สามารถปรับปรุงอย่างไร..."
                 }
                 rows={3}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 font-sarabun focus:outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500 resize-none"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 font-sarabun focus:outline-none focus:border-gray-500 focus:ring-0 resize-none"
               />
             </div>
 

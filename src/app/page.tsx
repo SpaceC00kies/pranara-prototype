@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from 'react';
 import FeedbackModal from '../components/feedback/FeedbackModal';
 import { useAuth } from '../contexts/AuthContext';
 import AuthModal from '../components/auth/AuthModal';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 
 // Helper function to clean up markdown formatting from AI responses
 function formatMessageText(text: string): string {
@@ -184,14 +186,15 @@ export default function Home() {
   // Session ID management for authenticated and anonymous users
   useEffect(() => {
     if (isAuthenticated && chatSessions.length > 0 && !currentSessionId) {
-      // Only set initial session if we don't have one already
-      const mostRecentSession = chatSessions[0];
-      setCurrentSessionId(mostRecentSession.id);
-      setSessionId(mostRecentSession.id);
-      console.log('🔑 Using authenticated session:', mostRecentSession.id);
-      
-      // Load chat history for this session and show chat interface if there are messages
-      if (mostRecentSession.message_count > 0) {
+      // Only set initial session if we don't have one already and it has messages
+      const sessionsWithMessages = chatSessions.filter(s => s.message_count > 0);
+      if (sessionsWithMessages.length > 0) {
+        const mostRecentSession = sessionsWithMessages[0];
+        setCurrentSessionId(mostRecentSession.id);
+        setSessionId(mostRecentSession.id);
+        console.log('🔑 Using authenticated session:', mostRecentSession.id);
+        
+        // Load chat history for this session and show chat interface
         loadChatHistory(mostRecentSession.id);
         setHasStartedChat(true);
       }
@@ -227,7 +230,23 @@ export default function Home() {
     e.preventDefault();
 
     // Ensure sessionId is not null before sending
-    const activeSessionId = currentSessionId || sessionId;
+    let activeSessionId = currentSessionId || sessionId;
+    
+    // For authenticated users without a session, create one automatically
+    if (isAuthenticated && !activeSessionId) {
+      console.log('🔧 Creating session for authenticated user without active session');
+      const result = await createSession('New Chat');
+      if (result.success && result.session) {
+        activeSessionId = result.session.id;
+        setCurrentSessionId(result.session.id);
+        setSessionId(result.session.id);
+        console.log('✨ Auto-created session:', result.session.id);
+      } else {
+        console.error('❌ Failed to create session for authenticated user');
+        return;
+      }
+    }
+    
     if (!inputValue.trim() || isLoading || !activeSessionId) return;
 
     // Transition to chat mode on first message
@@ -249,6 +268,15 @@ export default function Home() {
 
     try {
       console.log(`🎯 Frontend: Sending message with model ${selectedModel.toUpperCase()}`);
+      console.log(`🔑 Session ID:`, {
+        activeSessionId: activeSessionId ? `${activeSessionId.substring(0, 8)}...` : 'null',
+        length: activeSessionId?.length,
+        isAuthenticated,
+        currentSessionId: currentSessionId ? `${currentSessionId.substring(0, 8)}...` : 'null',
+        sessionId: sessionId ? `${sessionId.substring(0, 8)}...` : 'null',
+        chatSessionsCount: chatSessions.length,
+        hasSessionsWithMessages: chatSessions.filter(s => s.message_count > 0).length
+      });
       
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       
@@ -431,36 +459,42 @@ export default function Home() {
                     <span className="text-xs sm:text-sm text-gray-600 truncate max-w-24 sm:max-w-none" style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}>
                       สวัสดี, {user?.display_name}
                     </span>
-                    <button
+                    <Button
                       onClick={logout}
-                      className="text-xs sm:text-sm text-gray-500 hover:text-teal-600 transition-colors focus:outline-none"
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs sm:text-sm text-gray-500 hover:text-teal-600 transition-colors h-auto p-1 focus:ring-0 focus-visible:ring-0"
                       style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
                     >
                       ออกจากระบบ
-                    </button>
+                    </Button>
                   </div>
                 ) : (
                   <div className="flex items-center space-x-2 sm:space-x-4">
-                    <button
+                    <Button
                       onClick={() => {
                         setAuthMode('login');
                         setShowAuthModal(true);
                       }}
-                      className="text-xs sm:text-sm text-gray-600 hover:text-teal-600 transition-colors focus:outline-none"
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs sm:text-sm text-gray-600 hover:text-teal-600 transition-colors h-auto p-1 focus:ring-0 focus-visible:ring-0"
                       style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
                     >
                       เข้าสู่ระบบ
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={() => {
                         setAuthMode('register');
                         setShowAuthModal(true);
                       }}
-                      className="text-xs sm:text-sm text-gray-600 hover:text-teal-600 transition-colors focus:outline-none"
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs sm:text-sm text-gray-600 hover:text-teal-600 transition-colors h-auto p-1 focus:ring-0 focus-visible:ring-0"
                       style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
                     >
                       สมัครสมาชิก
-                    </button>
+                    </Button>
                   </div>
                 )}
               </>
@@ -491,11 +525,10 @@ export default function Home() {
           <div className="w-full max-w-2xl relative">
             <form onSubmit={handleSubmit}>
               <div className="relative">
-                <textarea
+                <Textarea
                   ref={inputRef}
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  autoFocus={false}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
@@ -508,7 +541,7 @@ export default function Home() {
                     bg-gray-50 border border-gray-200 rounded-2xl
                     font-sarabun text-base md:text-lg
                     placeholder-gray-400
-                    focus:outline-none focus:border-primary-300 focus:bg-white
+                    focus:outline-none focus:border-primary-300 focus:bg-white focus:ring-0 focus-visible:ring-0
                     resize-none overflow-hidden
                     min-h-[80px] md:min-h-[100px] max-h-48
                     transition-colors duration-200
@@ -527,19 +560,20 @@ export default function Home() {
                 />
 
                 {/* Send Button */}
-                <button
+                <Button
                   type="submit"
                   disabled={!inputValue.trim() || isLoading || !sessionId}
+                  size="sm"
                   className={`
                     absolute right-3 bottom-3
-                    w-8 h-8 rounded-lg
+                    w-8 h-8 rounded-lg p-0
                     ${inputValue.trim() && !isLoading && sessionId
                       ? 'bg-primary-300 hover:bg-primary-400 text-gray-800'
                       : 'bg-gray-200 text-gray-400'
                     }
                     flex items-center justify-center
                     transition-all duration-300 ease-out
-                    focus:outline-none focus:ring-2 focus:ring-primary-200
+                    focus:outline-none focus:ring-0
                     disabled:cursor-not-allowed
                   `}
                   aria-label="ส่งข้อความ"
@@ -561,7 +595,7 @@ export default function Home() {
                       />
                     </svg>
                   )}
-                </button>
+                </Button>
               </div>
             </form>
 
@@ -580,8 +614,8 @@ export default function Home() {
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value as 'pnr-g' | 'pnr-g2')}
                 >
-                  <option value="pnr-g">PNR-G (Professional)</option>
-                  <option value="pnr-g2">PNR-G2 (Playful) 😊</option>
+                  <option value="pnr-g">PNR-G</option>
+                  <option value="pnr-g2">PNR-G2</option>
                 </select>
                 <div className="absolute inset-y-0 right-0 flex items-center pointer-events-none">
                   <svg className="w-2 h-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -593,9 +627,9 @@ export default function Home() {
           </div>
 
           {/* Session Quick Access for Authenticated Users - MINIMAL */}
-          {isAuthenticated && chatSessions.length > 0 && (
+          {isAuthenticated && chatSessions.filter(s => s.message_count > 0).length > 0 && (
             <div className="mt-12 w-full max-w-2xl space-y-2">
-              {chatSessions.slice(0, 3).map((session) => (
+              {chatSessions.filter(s => s.message_count > 0).slice(0, 3).map((session) => (
                 <button
                   key={session.id}
                   onClick={async () => {
@@ -637,19 +671,20 @@ export default function Home() {
   return (
     <div className="min-h-dvh bg-primary-100 flex flex-col">
       {/* Responsive Header */}
-      <div className="flex-shrink-0 border-b border-primary-200 px-4 sm:px-6 py-3 sm:py-4">
+      <div className="flex-shrink-0 border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
         <div className="max-w-4xl mx-auto">
           {/* Mobile Layout: Stack vertically */}
           <div className="flex flex-col space-y-3 sm:hidden">
             {/* Top Row: Logo and User Menu */}
             <div className="flex items-center justify-between">
-              <button
+              <Button
                 onClick={() => {
                   setMessages([]);
                   setHasStartedChat(false);
                   setInputValue('');
                 }}
-                className="flex items-center space-x-2 hover:opacity-80 transition-opacity focus:outline-none"
+                variant="ghost"
+                className="flex items-center space-x-2 hover:bg-transparent hover:opacity-80 transition-opacity h-auto p-1 focus:ring-0 focus-visible:ring-0"
               >
                 <img
                   src="/Logo.png"
@@ -659,7 +694,7 @@ export default function Home() {
                 <h1 className="text-base font-semibold text-primary-300" style={{ fontFamily: 'Boska, ui-serif, Georgia, serif' }}>
                   Pranara
                 </h1>
-              </button>
+              </Button>
               
               {/* Mobile User Menu */}
               {!authLoading && (
@@ -669,26 +704,30 @@ export default function Home() {
                       <span className="text-xs text-gray-600 truncate max-w-20" style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}>
                         {user?.display_name}
                       </span>
-                      <button
+                      <Button
                         onClick={logout}
-                        className="text-xs text-gray-500 hover:text-teal-600 transition-colors focus:outline-none"
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-gray-500 hover:text-teal-600 transition-colors h-auto p-1 focus:ring-0 focus-visible:ring-0"
                         style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
                       >
                         ออก
-                      </button>
+                      </Button>
                     </div>
                   ) : (
                     <div className="flex items-center space-x-2">
-                      <button
+                      <Button
                         onClick={() => {
                           setAuthMode('login');
                           setShowAuthModal(true);
                         }}
-                        className="text-xs text-gray-600 hover:text-teal-600 transition-colors focus:outline-none"
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-gray-600 hover:text-teal-600 transition-colors h-auto p-1 focus:ring-0 focus-visible:ring-0"
                         style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
                       >
                         เข้าสู่ระบบ
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </>
@@ -699,31 +738,33 @@ export default function Home() {
             {isAuthenticated && (
               <div className="flex items-center justify-between">
                 {/* Current Session Display & Menu */}
-                {chatSessions.length > 0 && (
+                {chatSessions.filter(s => s.message_count > 0).length > 0 && (
                   <div className="relative flex-1 mr-2">
-                    <button
+                    <Button
                       onClick={() => setShowSessionMenu(!showSessionMenu)}
-                      className="session-trigger flex items-center justify-between w-full text-xs text-gray-600 hover:text-gray-800 border border-gray-400 rounded px-2 py-1 transition-colors focus:outline-none focus:ring-0 focus:border-gray-400"
+                      variant="outline"
+                      size="sm"
+                      className="session-trigger flex items-center justify-between w-full text-xs text-gray-600 hover:text-gray-800 border border-gray-400 rounded px-2 py-1 transition-colors focus:outline-none focus:ring-0 focus-visible:ring-0 focus:border-gray-400 h-auto"
                       style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
                     >
                       <span className="truncate">{chatSessions.find(s => s.id === currentSessionId)?.title || 'New Chat'}</span>
                       <svg className="w-3 h-3 ml-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
-                    </button>
+                    </Button>
                     
                     {/* Session Dropdown Menu */}
                     {showSessionMenu && (
                       <div 
-                        className="session-dropdown absolute top-full left-0 mt-1 w-64 bg-teal-50 border border-teal-200 rounded-lg shadow-lg z-50"
+                        className="session-dropdown absolute top-full left-0 mt-1 w-64 bg-white border-0 rounded-lg shadow-lg z-50"
                         onClick={(e) => e.stopPropagation()} // Prevent dropdown from closing when clicking inside
                       >
                         <div className="py-2">
-                          {chatSessions.map((session) => (
+                          {chatSessions.filter(s => s.message_count > 0).map((session) => (
                             <div key={session.id} className="group">
                               {renamingSessionId === session.id ? (
                                 /* Rename Input */
-                                <div className="px-3 py-2">
+                                <div className="px-3 py-1">
                                   <input
                                     type="text"
                                     value={newSessionTitle}
@@ -766,8 +807,8 @@ export default function Home() {
                                 </div>
                               ) : (
                                 /* Session Item */
-                                <div className="flex items-center justify-between px-3 py-2 hover:bg-teal-100 focus:outline-none">
-                                  <button
+                                <div className="flex items-center justify-between px-3 py-1 hover:bg-transparent focus:outline-none">
+                                  <Button
                                     onClick={async () => {
                                       if (currentSessionId !== session.id && loadingHistory !== session.id) {
                                         // Clear current messages first
@@ -786,32 +827,35 @@ export default function Home() {
                                       }
                                       setShowSessionMenu(false);
                                     }}
-                                    className={`flex-1 text-left text-sm focus:outline-none ${
+                                    variant="ghost"
+                                    className={`flex-1 text-left text-sm justify-start h-auto p-1 ${
                                       currentSessionId === session.id ? 'text-teal-600 font-medium' : 'text-gray-700'
                                     }`}
                                     style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
                                   >
                                     <div>{session.title}</div>
-                                  </button>
+                                  </Button>
                                   
                                   {/* Session Actions */}
                                   <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button
+                                    <Button
                                       onClick={(e) => {
                                         e.stopPropagation(); // Prevent event bubbling
                                         setRenamingSessionId(session.id);
                                         setNewSessionTitle(session.title);
                                       }}
-                                      className="p-1 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none"
+                                      variant="ghost"
+                                      size="sm"
+                                      className="p-1 text-gray-400 hover:text-gray-600 transition-colors h-auto w-auto"
                                       title="เปลี่ยนชื่อ"
                                     >
                                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                       </svg>
-                                    </button>
+                                    </Button>
                                     
                                     {chatSessions.length > 1 && (
-                                      <button
+                                      <Button
                                         onClick={async (e) => {
                                           e.stopPropagation(); // Prevent event bubbling
                                           if (confirm('คุณต้องการลบแชทนี้หรือไม่?')) {
@@ -832,13 +876,15 @@ export default function Home() {
                                             }
                                           }
                                         }}
-                                        className="p-1 text-gray-400 hover:text-red-500 transition-colors focus:outline-none"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="p-1 text-gray-400 hover:text-red-500 transition-colors h-auto w-auto"
                                         title="ลบแชท"
                                       >
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                         </svg>
-                                      </button>
+                                      </Button>
                                     )}
                                   </div>
                                 </div>
@@ -853,21 +899,17 @@ export default function Home() {
                 
                 {/* Mobile New Chat Button */}
                 {chatSessions.length < 3 && (
-                  <button
+                  <Button
                     onClick={handleNewChat}
-                    className="text-xs bg-teal-600 hover:bg-teal-700 text-white px-2 py-1 rounded transition-colors focus:outline-none flex-shrink-0"
+                    size="sm"
+                    className="text-xs bg-teal-600 hover:bg-teal-700 text-white px-2 py-1 rounded transition-colors flex-shrink-0 h-auto"
                     style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
                   >
                     + ใหม่
-                  </button>
+                  </Button>
                 )}
                 
-                {/* Mobile Session Limit Indicator */}
-                {chatSessions.length >= 3 && (
-                  <span className="text-xs text-gray-400 flex-shrink-0" style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}>
-                    (สูงสุด 3)
-                  </span>
-                )}
+
               </div>
             )}
           </div>
@@ -876,13 +918,14 @@ export default function Home() {
           <div className="hidden sm:flex items-center justify-between">
             {/* Logo and Session Info */}
             <div className="flex items-center space-x-4">
-              <button
+              <Button
                 onClick={() => {
                   setMessages([]);
                   setHasStartedChat(false);
                   setInputValue('');
                 }}
-                className="flex items-center space-x-1 hover:opacity-80 transition-opacity focus:outline-none"
+                variant="ghost"
+                className="flex items-center space-x-1 hover:bg-transparent hover:opacity-80 transition-opacity h-auto p-1 focus:ring-0 focus-visible:ring-0"
               >
                 <img
                   src="/Logo.png"
@@ -894,44 +937,178 @@ export default function Home() {
                     Pranara
                   </h1>
                 </div>
-              </button>
+              </Button>
               
               {/* Desktop Session Management for Authenticated Users */}
               {isAuthenticated && (
                 <div className="flex items-center space-x-3">
                   {/* Current Session Display & Menu */}
-                  {chatSessions.length > 0 && (
+                  {chatSessions.filter(s => s.message_count > 0).length > 0 && (
                     <div className="relative">
-                      <button
+                      <Button
                         onClick={() => setShowSessionMenu(!showSessionMenu)}
-                        className="session-trigger flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-400 rounded px-3 py-1 transition-colors focus:outline-none focus:ring-0 focus:border-gray-400"
+                        variant="outline"
+                        className="session-trigger flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-400 rounded px-3 py-1 transition-colors focus:outline-none focus:ring-0 focus-visible:ring-0 focus:border-gray-400 h-auto"
                         style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
                       >
                         <span>{chatSessions.find(s => s.id === currentSessionId)?.title || 'New Chat'}</span>
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
-                      </button>
+                      </Button>
+                      
+                      {/* Desktop Session Dropdown Menu */}
+                      {showSessionMenu && (
+                        <div 
+                          className="session-dropdown absolute top-full left-0 mt-1 w-64 bg-white border-0 rounded-lg shadow-lg z-50"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="py-2">
+                            {chatSessions.filter(s => s.message_count > 0).map((session) => (
+                              <div key={session.id} className="group">
+                                {renamingSessionId === session.id ? (
+                                  /* Rename Input */
+                                  <div className="px-3 py-1">
+                                    <input
+                                      type="text"
+                                      value={newSessionTitle}
+                                      onChange={(e) => setNewSessionTitle(e.target.value)}
+                                      onKeyDown={async (e) => {
+                                        e.stopPropagation();
+                                        if (e.key === 'Enter') {
+                                          e.preventDefault();
+                                          if (newSessionTitle.trim()) {
+                                            const result = await renameSession(session.id, newSessionTitle.trim());
+                                            if (result.success) {
+                                              console.log('✅ Session renamed successfully');
+                                            } else {
+                                              alert('ไม่สามารถเปลี่ยนชื่อแชทได้: ' + (result.error || 'เกิดข้อผิดพลาด'));
+                                            }
+                                          }
+                                          setRenamingSessionId(null);
+                                          setNewSessionTitle('');
+                                        } else if (e.key === 'Escape') {
+                                          setRenamingSessionId(null);
+                                          setNewSessionTitle('');
+                                        }
+                                      }}
+                                      onBlur={async (e) => {
+                                        e.stopPropagation();
+                                        if (newSessionTitle.trim() && newSessionTitle.trim() !== session.title) {
+                                          const result = await renameSession(session.id, newSessionTitle.trim());
+                                          if (!result.success) {
+                                            alert('ไม่สามารถเปลี่ยนชื่อแชทได้: ' + (result.error || 'เกิดข้อผิดพลาด'));
+                                          }
+                                        }
+                                        setRenamingSessionId(null);
+                                        setNewSessionTitle('');
+                                      }}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="w-full text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-0 focus:border-gray-300"
+                                      style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
+                                      autoFocus
+                                    />
+                                  </div>
+                                ) : (
+                                  /* Session Item */
+                                  <div className="flex items-center justify-between px-3 py-1 hover:bg-transparent focus:outline-none">
+                                    <Button
+                                      onClick={async () => {
+                                        if (currentSessionId !== session.id && loadingHistory !== session.id) {
+                                          setMessages([]);
+                                          setCurrentSessionId(session.id);
+                                          setSessionId(session.id);
+                                          await loadChatHistory(session.id);
+                                          if (session.message_count > 0) {
+                                            setHasStartedChat(true);
+                                          } else {
+                                            setHasStartedChat(false);
+                                          }
+                                          console.log('🔄 Switched to session:', session.id);
+                                        }
+                                        setShowSessionMenu(false);
+                                      }}
+                                      variant="ghost"
+                                      className={`flex-1 text-left text-sm justify-start h-auto p-1 ${
+                                        currentSessionId === session.id ? 'text-teal-600 font-medium' : 'text-gray-700'
+                                      }`}
+                                      style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
+                                    >
+                                      <div>{session.title}</div>
+                                    </Button>
+                                    
+                                    {/* Session Actions */}
+                                    <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <Button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setRenamingSessionId(session.id);
+                                          setNewSessionTitle(session.title);
+                                        }}
+                                        variant="ghost"
+                                        size="sm"
+                                        className="p-1 text-gray-400 hover:text-gray-600 transition-colors h-auto w-auto"
+                                        title="เปลี่ยนชื่อ"
+                                      >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                      </Button>
+                                      
+                                      {chatSessions.length > 1 && (
+                                        <Button
+                                          onClick={async (e) => {
+                                            e.stopPropagation();
+                                            if (confirm('คุณต้องการลบแชทนี้หรือไม่?')) {
+                                              const result = await deleteSession(session.id);
+                                              if (result.success) {
+                                                if (currentSessionId === session.id) {
+                                                  const remainingSession = chatSessions.find(s => s.id !== session.id);
+                                                  if (remainingSession) {
+                                                    setCurrentSessionId(remainingSession.id);
+                                                    setSessionId(remainingSession.id);
+                                                    await loadChatHistory(remainingSession.id);
+                                                  }
+                                                }
+                                                setShowSessionMenu(false);
+                                              } else {
+                                                alert('ไม่สามารถลบแชทได้: ' + (result.error || 'เกิดข้อผิดพลาด'));
+                                              }
+                                            }
+                                          }}
+                                          variant="ghost"
+                                          size="sm"
+                                          className="p-1 text-gray-400 hover:text-red-500 transition-colors h-auto w-auto"
+                                          title="ลบแชท"
+                                        >
+                                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                          </svg>
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                   
                   {/* Desktop New Chat Button */}
                   {chatSessions.length < 3 && (
-                    <button
+                    <Button
                       onClick={handleNewChat}
-                      className="text-sm bg-teal-600 hover:bg-teal-700 text-white px-3 py-1 rounded transition-colors focus:outline-none"
+                      className="text-sm bg-teal-600 hover:bg-teal-700 text-white px-3 py-1 rounded transition-colors h-auto"
                       style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
                     >
                       + แชทใหม่
-                    </button>
+                    </Button>
                   )}
                   
-                  {/* Desktop Session Limit Indicator */}
-                  {chatSessions.length >= 3 && (
-                    <span className="text-xs text-gray-400" style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}>
-                      (สูงสุด 3 แชท)
-                    </span>
-                  )}
+
                 </div>
               )}
             </div>
@@ -944,36 +1121,42 @@ export default function Home() {
                     <span className="text-sm text-gray-600" style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}>
                       {user?.display_name}
                     </span>
-                    <button
+                    <Button
                       onClick={logout}
-                      className="text-sm text-gray-500 hover:text-teal-600 transition-colors focus:outline-none"
+                      variant="ghost"
+                      size="sm"
+                      className="text-sm text-gray-500 hover:text-teal-600 transition-colors h-auto p-1 focus:ring-0 focus-visible:ring-0"
                       style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
                     >
                       ออกจากระบบ
-                    </button>
+                    </Button>
                   </div>
                 ) : (
                   <div className="flex items-center space-x-4">
-                    <button
+                    <Button
                       onClick={() => {
                         setAuthMode('login');
                         setShowAuthModal(true);
                       }}
-                      className="text-sm text-gray-600 hover:text-teal-600 transition-colors focus:outline-none"
+                      variant="ghost"
+                      size="sm"
+                      className="text-sm text-gray-600 hover:text-teal-600 transition-colors h-auto p-1 focus:ring-0 focus-visible:ring-0"
                       style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
                     >
                       เข้าสู่ระบบ
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={() => {
                         setAuthMode('register');
                         setShowAuthModal(true);
                       }}
-                      className="text-sm text-gray-600 hover:text-teal-600 transition-colors focus:outline-none"
+                      variant="ghost"
+                      size="sm"
+                      className="text-sm text-gray-600 hover:text-teal-600 transition-colors h-auto p-1 focus:ring-0 focus-visible:ring-0"
                       style={{ fontFamily: 'IBM Plex Sans Thai, system-ui, sans-serif' }}
                     >
                       สมัครสมาชิก
-                    </button>
+                    </Button>
                   </div>
                 )}
               </>
@@ -1021,30 +1204,36 @@ export default function Home() {
                           {message.text && !isLoading && !isStreaming && message.id === messages.filter(m => m.sender === 'assistant').slice(-1)[0]?.id && (
                             <div className="flex justify-end mt-2">
                               <div className="flex items-center space-x-0.5 animate-fade-in">
-                                <button 
+                                <Button 
                                   onClick={() => handleQuickFeedback(message.id, 'helpful')}
-                                  className="p-0.5 w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 transition-colors opacity-50 hover:opacity-100 focus:outline-none focus:ring-1 focus:ring-gray-300"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="p-0.5 w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 transition-colors opacity-50 hover:opacity-100 focus:outline-none focus:ring-0"
                                   title="This response was helpful"
                                   aria-label="Mark as helpful"
                                 >
                                   <img src="/like.png" alt="Like" className="w-3.5 h-3.5" />
-                                </button>
-                                <button 
+                                </Button>
+                                <Button 
                                   onClick={() => openFeedbackModal(message.id, message.text, 'detailed')}
-                                  className="p-0.5 w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 transition-colors opacity-50 hover:opacity-100 focus:outline-none focus:ring-1 focus:ring-gray-300"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="p-0.5 w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 transition-colors opacity-50 hover:opacity-100 focus:outline-none focus:ring-0"
                                   title="This response was not helpful - provide feedback"
                                   aria-label="Provide negative feedback"
                                 >
                                   <img src="/dont-like.png" alt="Don't like" className="w-3.5 h-3.5" />
-                                </button>
-                                <button 
+                                </Button>
+                                <Button 
                                   onClick={() => openFeedbackModal(message.id, message.text, 'detailed')}
-                                  className="p-0.5 w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 transition-colors opacity-50 hover:opacity-100 focus:outline-none focus:ring-1 focus:ring-gray-300"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="p-0.5 w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 transition-colors opacity-50 hover:opacity-100 focus:outline-none focus:ring-0"
                                   title="Provide detailed feedback"
                                   aria-label="Provide feedback"
                                 >
                                   <img src="/form.png" alt="Feedback form" className="w-3.5 h-3.5" />
-                                </button>
+                                </Button>
 
                               </div>
                             </div>
@@ -1095,11 +1284,10 @@ export default function Home() {
         <div className="flex-shrink-0 px-6 py-4">
           <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
             <div className="relative">
-              <textarea
+              <Textarea
                 ref={inputRef}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                autoFocus={false}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -1112,7 +1300,7 @@ export default function Home() {
                   bg-gray-50 border border-gray-200 rounded-xl
                   font-sarabun text-base
                   placeholder-gray-400
-                  focus:outline-none focus:border-primary-300 focus:bg-white
+                  focus:outline-none focus:border-primary-300 focus:bg-white focus:ring-0 focus-visible:ring-0
                   resize-none overflow-hidden
                   min-h-[60px] max-h-32
                   transition-colors duration-200
@@ -1132,19 +1320,20 @@ export default function Home() {
               />
 
               {/* Send Button */}
-              <button
+              <Button
                 type="submit"
                 disabled={!inputValue.trim() || isLoading || !sessionId}
+                size="sm"
                 className={`
                   absolute right-3 bottom-3
-                  w-7 h-7 rounded-lg
+                  w-7 h-7 rounded-lg p-0
                   ${inputValue.trim() && !isLoading && sessionId
                     ? 'bg-primary-300 hover:bg-primary-400 text-gray-800'
                     : 'bg-gray-200 text-gray-400'
                   }
                   flex items-center justify-center
                   transition-all duration-300 ease-out
-                  focus:outline-none focus:ring-2 focus:ring-primary-200
+                  focus:outline-none focus:ring-0
                   disabled:cursor-not-allowed
                 `}
                 aria-label="ส่งข้อความ"
@@ -1166,7 +1355,7 @@ export default function Home() {
                     />
                   </svg>
                 )}
-              </button>
+              </Button>
             </div>
           </form>
         </div>
